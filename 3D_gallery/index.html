@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Gallerie</title>
+
+    <link rel="stylesheet" href="./css_Files/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Roboto:wght@400&display=swap" rel="stylesheet">
+  </head>
+
+  <body>
+    <div class="background_menu">
+
+      <div id="menu">
+        <div id="img_container">
+          <img src="./images/vanGogh.jpg" alt="Blick über Arles">
+        </div>
+
+        <div id="text_container">
+          <h1>3D Gallerie</h1>
+          <div>
+            <p>Willkommen in der 3D Gallerie! </p>
+          </div>
+
+          <div id="controls">
+            <p>Bedienung:</p>
+            <p>Pfeiltasten</p>
+            <p>Mausbewegung</p>
+          </div>
+
+          <div id="enter">
+            <p>Betritt die Galerie</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- <script src="three.module.js"></script> 
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.js"></script>
+    <script src="./javascript_Files/main.js"></script> -->
+    <script>
+      document.getElementById('enter').addEventListener('click', () => {
+        window.location.href = 'gallery.html'; // lädt die Galerie
+      });
+  </script>
+  </body>
+</html>
