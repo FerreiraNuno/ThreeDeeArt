@@ -1,14 +1,11 @@
 /*
-Vom Live Server/Browser aus gesehen:
-    3D_gallery/index.html      <-- Root
-    3D_gallery/images/floor.jpg  <-- Pfad für Browser
-    3D_gallery/javascript_Files/main.js  <-- JS-Datei
+Ab Version v0.162 zwingend als ES-Module importieren
 
-=> deshalb müssen Dateien anders geladen werden, Root ist nicht main.js vom Browser aus, sondern index.html
 
-import * as THREE from '../three.module.js';
-
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/controls/OrbitControls.js';
 */
+
 
 const scene = new THREE.Scene();
 
@@ -49,7 +46,7 @@ scene.add(cube);
 //Boden
 const WIDTH = 25;  // Breite
 const DEPTH = 25;  // Tiefe der Plane
-const WALL_HEIGHT = 50;
+const WALL_HEIGHT = 10;
 const floorTexture = new THREE.TextureLoader().load('images/floor.jpg');
 
 floorTexture.wrapS = THREE.RepeatWrapping; 
@@ -65,66 +62,112 @@ scene.add(plane)
 
 //Wände
 const walls = new THREE.Group();
-scene.add(walls);
+plane.add(walls);
+
+const wallTexture = new THREE.TextureLoader().load('images/wall2.jpg');
+wallTexture.wrapS = THREE.RepeatWrapping; 
+wallTexture.wrapT = THREE.RepeatWrapping; 
+wallTexture.repeat.set(20, 20); 
 
 const frontWall = new THREE.Mesh(
     new THREE.BoxGeometry(WIDTH, WALL_HEIGHT, 0.01), //Breite, Höhe, Tiefe (in dem Fall sehr flache Platte)
-    new THREE.MeshBasicMaterial({color: "black"})
+    new THREE.MeshBasicMaterial({map: wallTexture, side: THREE.DoubleSide})
 );
-frontWall.position.z = -DEPTH/2; //hintere Kante der Plane
-frontWall.position.y = (WALL_HEIGHT/ 2) - 1; //Plane liegt auf y=-1
-
-const backWall = new THREE.Mesh(
-    new THREE.BoxGeometry(WIDTH, WALL_HEIGHT, 0.01),
-    new THREE.MeshBasicMaterial({ color: "black" })
-);
-backWall.position.z = DEPTH / 2; // vordere Kante der Plane
-backWall.position.y = (WALL_HEIGHT / 2) - 1;
+frontWall.rotation.x = Math.PI / 2;     
+frontWall.translateZ(-DEPTH / 2);
+frontWall.translateY(WALL_HEIGHT / 2)
 
 const leftWall = new THREE.Mesh(
     new THREE.BoxGeometry(DEPTH, WALL_HEIGHT, 0.01),
-    new THREE.MeshBasicMaterial({ color: "grey" })
+    new THREE.MeshBasicMaterial({ map: wallTexture, side: THREE.DoubleSide })
 );
+leftWall.rotation.z = Math.PI / 2; 
 leftWall.rotation.y = Math.PI / 2; 
-leftWall.position.x = -WIDTH / 2; 
-leftWall.position.y = (WALL_HEIGHT / 2) - 1;
+leftWall.translateZ(-WIDTH / 2);
+leftWall.translateY(WALL_HEIGHT / 2);
 
 const rightWall = new THREE.Mesh(
     new THREE.BoxGeometry(DEPTH, WALL_HEIGHT, 0.01),
-    new THREE.MeshBasicMaterial({ color: "grey" })
+    new THREE.MeshBasicMaterial({ map: wallTexture, side: THREE.DoubleSide })
 );
-rightWall.rotation.y = Math.PI / 2;
-rightWall.position.x = WIDTH / 2;
-rightWall.position.y = (WALL_HEIGHT / 2) - 1;
+rightWall.rotation.z = Math.PI / 2; 
+rightWall.rotation.y = Math.PI / 2; 
+rightWall.translateZ(WIDTH / 2);
+rightWall.translateY(WALL_HEIGHT / 2);
 
-walls.add(frontWall, backWall, leftWall, rightWall)
+
+const backWall = new THREE.Mesh(
+    new THREE.BoxGeometry(WIDTH, WALL_HEIGHT, 0.01),
+    new THREE.MeshBasicMaterial({ map: wallTexture, side: THREE.DoubleSide })
+);
+backWall.rotation.x = Math.PI / 2;     
+backWall.translateZ(DEPTH / 2);
+backWall.translateY(WALL_HEIGHT / 2)
+
+walls.add(frontWall, leftWall, rightWall, backWall)
+
+//Dach
+
+const dachGeometry = new THREE.BoxGeometry(WIDTH,0.01 , DEPTH)
+const dachMaterial = new THREE.MeshBasicMaterial({color: "grey", side: THREE.DoubleSide}); //DoubleSide rendert beide Seiten der Plane
+const dach = new THREE.Mesh(dachGeometry, dachMaterial);
+dach.rotation.x = -Math.PI / 2;; 
+dach.translateY(-10 + 0.005)
+plane.add(dach)
 
 //Bedienung
 document.addEventListener("keydown", onKeyDown, false);
 
 function onKeyDown(event){
-    let  keycode = event.key || event.code //Tastencode der gedrückten Taste auslesen
-    
-    if (keycode === "ArrowLeft") { 
-        camera.translateX(-0.03)
-    }
-    else if (keycode === "ArrowRight") { 
-        camera.translateX(0.03)
-    }
-    else if (keycode === "ArrowUp") { 
-        camera.translateY(0.03)
-    }
-    else if (keycode === "ArrowDown") { 
-        camera.translateY(-0.03)
+   
+    const cameraMoveSpeed = 0.25;
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward)   //Blickrichtung der Kamera
+    forward.y = 0; // Bewegung auf XZ-Ebene begrenzen
+    forward.normalize();
+    const right = new THREE.Vector3();
+    right.crossVectors(camera.up, forward).normalize(); //dritte Koordinatenachse der Kamera
+
+    // Translation-Vektor, den wir nicht nur auf Kamera, sondern auf controls.target = Blickrichtung anwenden müssen
+    const translation = new THREE.Vector3();
+
+    let  keycode = event.code //Tastencode der gedrückten Taste auslesen
+      switch (event.code) {
+        case "KeyW":
+            translation.copy(forward).multiplyScalar(cameraMoveSpeed);  //copy zur Sicherheit -> neue Objekte/vorhandene Obj. überschreiben
+            break;
+        case "KeyS":
+            translation.copy(forward).multiplyScalar(-cameraMoveSpeed);
+            break;
+        case "KeyA":
+            translation.copy(right).multiplyScalar(cameraMoveSpeed);
+            break;
+        case "KeyD":
+            translation.copy(right).multiplyScalar(-cameraMoveSpeed);
+            break;
+        default:
+            return;
     }
 
+    camera.position.add(translation);
+   // target mitverschieben -> Blickrichtung bleibt stabil
+    controls.target.add(translation);
+    
 }
+    
+
+//OrbitControls
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+
 
 //Rendering
 function animate() {
     requestAnimationFrame(animate); //ruft die Funktion bei jedem Bildschirm-Refresh auf
     cube.rotation.y += 0.01;
     cube.rotation.z += 0.01;
+    controls.update();
     renderer.render(scene, camera);
 }
 animate();
