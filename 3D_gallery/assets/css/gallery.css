@@ -1,0 +1,52 @@
+/**
+ * 3D Gallery specific styles
+ */
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    /* Prevent scrollbars in 3D view */
+    font-family: 'Roboto', sans-serif;
+}
+
+canvas {
+    display: block;
+    outline: none;
+    /* Remove focus outline on canvas */
+}
+
+/* Loading indicator (for future use) */
+.loading {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 1.2rem;
+    z-index: 1000;
+}
+
+/* Instructions overlay (for future use) */
+.instructions {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    color: white;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    z-index: 100;
+    max-width: 250px;
+}
+
+.instructions h3 {
+    margin: 0 0 10px 0;
+    color: #ffd700;
+}
+
+.instructions p {
+    margin: 5px 0;
+    line-height: 1.4;
+}

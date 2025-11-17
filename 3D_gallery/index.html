@@ -1,44 +1,50 @@
 <!DOCTYPE html>
 <html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3D Gallerie</title>
 
-    <link rel="stylesheet" href="./css_Files/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Roboto:wght@400&display=swap" rel="stylesheet">
-  </head>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Gallerie</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/menu.css">
+</head>
 
-  <body>
-    <div class="background_menu">
+<body>
+  <div class="landing-container">
+    <div class="hero-section">
+      <div class="hero-content">
+        <h1 class="hero-title">3D Gallerie</h1>
+        <p class="hero-subtitle">Entdecke Kunst in einer immersiven 3D-Umgebung</p>
 
-      <div id="menu">
-        <div id="img_container">
-          <img src="./images/vanGogh.jpg" alt="Blick über Arles">
-        </div>
-
-        <div id="text_container">
-          <h1>3D Gallerie</h1>
-          <div>
-            <p>Willkommen in der 3D Gallerie! </p>
+        <div class="controls-info">
+          <div class="control-item">
+            <span class="control-icon">⌨️</span>
+            <span>'W', 'A', 'S', 'D' zur Navigation</span>
           </div>
-
-          <div id="controls">
-            <p>Bedienung:</p>
-            <p>Pfeiltasten</p>
-            <p>Mausbewegung</p>
-          </div>
-
-          <div id="enter">
-            <p>Betritt die Galerie</p>
+          <div class="control-item">
+            <span class="control-icon">🖱️</span>
+            <span>Maus zum Umschauen</span>
           </div>
         </div>
+
+        <button class="enter-btn" id="enterGallery">
+          <span>Galerie betreten</span>
+          <span class="btn-arrow">→</span>
+        </button>
+      </div>
+
+      <div class="hero-image">
+        <img src="assets/images/vanGogh.jpg" alt="Kunstwerk Vorschau" />
+        <div class="image-overlay"></div>
       </div>
     </div>
-    <script>
-      document.getElementById('enter').addEventListener('click', () => {
-        window.location.href = 'gallery.html'; // lädt die Galerie
-      });
+  </div>
+
+  <script>
+    document.getElementById('enterGallery').addEventListener('click', () => {
+      window.location.href = 'gallery.html';
+    });
   </script>
-  </body>
+</body>
+
 </html>

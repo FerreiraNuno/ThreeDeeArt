@@ -1,13 +1,26 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>3D Galerie</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/gallery.css">
+
+  <!-- Import map for module resolution -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/"
+    }
+  }
+  </script>
 </head>
+
 <body>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.js"></script> 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
-  <script src="javascript_Files/main.js"></script>
+  <script type="module" src="assets/js/main.js"></script>
 </body>
+
 </html>
