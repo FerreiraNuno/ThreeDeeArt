@@ -13,18 +13,21 @@ export const GALLERY_CONFIG = {
         NEAR: 0.1,
         FAR: 1000,
         INITIAL_Z: 5,
-        MOVE_SPEED: 0.25
+        INITIAL_Y: 1.25,
+        MOVE_SPEED: 0.2,
+        // Collision boundary buffer from walls
+        BOUNDARY_BUFFER: 0.5
     },
 
     // Lighting
     LIGHTING: {
         AMBIENT: {
             COLOR: 0x101010,
-            INTENSITY: 1.0
+            INTENSITY: 20
         },
         DIRECTIONAL: {
             COLOR: 0xffffff,
-            INTENSITY: 1.0,
+            INTENSITY: 1,
             POSITION: { x: 5, y: 15, z: 7.5 }
         }
     },

@@ -9,7 +9,6 @@ import { CameraManager } from './modules/camera.js';
 import { RendererManager } from './modules/renderer.js';
 import { LightingManager } from './modules/lighting.js';
 import { GeometryManager } from './modules/geometry.js';
-import { ControlsManager } from './modules/controls.js';
 
 /**
  * Main Gallery Application Class
@@ -18,6 +17,7 @@ class GalleryApp {
     constructor() {
         this.managers = {};
         this.isRunning = false;
+        this.lastTime = 0;
         this.init();
     }
 
@@ -28,8 +28,8 @@ class GalleryApp {
         try {
             // Initialize core managers
             this.managers.scene = new SceneManager();
-            this.managers.camera = new CameraManager();
             this.managers.renderer = new RendererManager();
+            this.managers.camera = new CameraManager(this.managers.renderer.getRenderer());
 
             // Initialize lighting
             this.managers.lighting = new LightingManager(this.managers.scene.getScene());
@@ -37,12 +37,6 @@ class GalleryApp {
             // Initialize geometry and objects
             this.managers.geometry = new GeometryManager(this.managers.scene.getScene());
             this.setupScene();
-
-            // Initialize controls
-            this.managers.controls = new ControlsManager(
-                this.managers.camera.getCamera(),
-                this.managers.renderer.getRenderer()
-            );
 
             // Add camera to scene
             this.managers.scene.add(this.managers.camera.getCamera());
@@ -93,13 +87,17 @@ class GalleryApp {
     /**
      * Main animation loop
      */
-    animate() {
+    animate(currentTime = 0) {
         if (!this.isRunning) return;
 
-        requestAnimationFrame(() => this.animate());
+        requestAnimationFrame((time) => this.animate(time));
 
-        // Update controls
-        this.managers.controls.update();
+        // Calculate delta time in seconds
+        const deltaTime = this.lastTime === 0 ? 0 : (currentTime - this.lastTime) / 1000;
+        this.lastTime = currentTime;
+
+        // Update camera controls with delta time for smooth movement
+        this.managers.camera.update(deltaTime);
 
         // Animate objects
         this.managers.geometry.animateObjects();
