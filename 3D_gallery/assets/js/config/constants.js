@@ -4,7 +4,7 @@ export const GALLERY_CONFIG = {
     ROOM: {
         WIDTH: 25,
         DEPTH: 25,
-        WALL_HEIGHT: 10
+        WALL_HEIGHT: 8
     },
 
     // Camera settings
@@ -12,9 +12,9 @@ export const GALLERY_CONFIG = {
         FOV: 75,
         NEAR: 0.1,
         FAR: 1000,
-        INITIAL_Z: 5,
-        INITIAL_Y: 1.25,
-        MOVE_SPEED: 0.2,
+        INITIAL_Z: 3,
+        INITIAL_Y: 1.6, // Eye level height
+        MOVE_SPEED: 5,
         // Collision boundary buffer from walls
         BOUNDARY_BUFFER: 0.5
     },
@@ -22,26 +22,28 @@ export const GALLERY_CONFIG = {
     // Lighting
     LIGHTING: {
         AMBIENT: {
-            COLOR: 0x101010,
-            INTENSITY: 20
+            COLOR: 0x404040,
+            INTENSITY: 0.3
         },
         DIRECTIONAL: {
             COLOR: 0xffffff,
-            INTENSITY: 1,
-            POSITION: { x: 5, y: 15, z: 7.5 }
+            INTENSITY: 0.8,
+            POSITION: { x: 5, y: 8, z: 5 }
+        },
+        POINT: {
+            COLOR: 0xffffff,
+            INTENSITY: 0.5,
+            DISTANCE: 100,
+            POSITION: { x: 0, y: 3, z: 0 }
         }
     },
 
     // Renderer settings
     RENDERER: {
-        BACKGROUND_COLOR: 0xffffff,
-        ANTIALIAS: true
-    },
-
-    // Controls
-    CONTROLS: {
-        ENABLE_DAMPING: true,
-        DAMPING_FACTOR: 0.05
+        BACKGROUND_COLOR: 0x87CEEB, // Sky blue background
+        ANTIALIAS: true,
+        SHADOWS: true,
+        SHADOW_TYPE: 'PCFSoft'
     },
 
     // Textures
@@ -53,8 +55,35 @@ export const GALLERY_CONFIG = {
 
     // Texture settings
     TEXTURE_REPEAT: {
-        FLOOR: { x: 20, y: 20 },
-        WALL: { x: 20, y: 20 }
+        FLOOR: { x: 25, y: 25 },
+        WALL: { x: 10, y: 2 }
+    },
+
+    // Materials
+    MATERIALS: {
+        WALL: {
+            COLOR: 0xffffff
+        },
+        FLOOR: {
+            COLOR: 0x8B4513 // Brown floor
+        },
+        CEILING: {
+            COLOR: 0xffffff // White ceiling
+        },
+        CUBE: {
+            COLOR: 0xff6b6b // Red cube
+        }
+    },
+
+    // Shadow settings
+    SHADOWS: {
+        MAP_SIZE: 2048,
+        CAMERA_NEAR: 0.5,
+        CAMERA_FAR: 50,
+        CAMERA_LEFT: -10,
+        CAMERA_RIGHT: 10,
+        CAMERA_TOP: 10,
+        CAMERA_BOTTOM: -10
     },
 
     // Animation

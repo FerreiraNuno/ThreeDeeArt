@@ -13,9 +13,13 @@ export class GeometryManager {
 
     createTestCube() {
         const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshStandardMaterial({ color: "red" });
+        const material = new THREE.MeshLambertMaterial({
+            color: GALLERY_CONFIG.MATERIALS.CUBE.COLOR
+        });
         const cube = new THREE.Mesh(geometry, material);
-        cube.translateZ(1);
+        cube.position.set(0, 1, 0); // Center of room, sitting properly on floor
+        cube.castShadow = true;
+        cube.receiveShadow = true;
 
         this.objects.cube = cube;
         this.scene.add(cube);
@@ -33,21 +37,20 @@ export class GeometryManager {
         floorTexture.repeat.set(repeat.x, repeat.y);
 
         const geometry = new THREE.PlaneGeometry(WIDTH, DEPTH);
-        const material = new THREE.MeshBasicMaterial({
-            map: floorTexture,
-            side: THREE.DoubleSide
+        const material = new THREE.MeshLambertMaterial({
+            map: floorTexture
         });
 
         const floor = new THREE.Mesh(geometry, material);
         floor.rotation.x = -Math.PI / 2;
-        floor.position.y = -1;
+        floor.receiveShadow = true;
 
         this.objects.floor = floor;
         this.scene.add(floor);
         return floor;
     }
 
-    createWalls(floor) {
+    createWalls() {
         const { WIDTH, DEPTH, WALL_HEIGHT } = GALLERY_CONFIG.ROOM;
         const wallTexture = this.textureLoader.load(GALLERY_CONFIG.TEXTURES.WALL);
 
@@ -57,73 +60,58 @@ export class GeometryManager {
         const repeat = GALLERY_CONFIG.TEXTURE_REPEAT.WALL;
         wallTexture.repeat.set(repeat.x, repeat.y);
 
-        const wallMaterial = new THREE.MeshBasicMaterial({
-            map: wallTexture,
-            side: THREE.DoubleSide
+        const wallMaterial = new THREE.MeshLambertMaterial({
+            map: wallTexture
         });
 
-        const walls = new THREE.Group();
-
-        // Front wall
-        const frontWall = new THREE.Mesh(
-            new THREE.BoxGeometry(WIDTH, WALL_HEIGHT, 0.01),
-            wallMaterial
-        );
-        frontWall.rotation.x = Math.PI / 2;
-        frontWall.translateZ(-DEPTH / 2);
-        frontWall.translateY(WALL_HEIGHT / 2);
-
-        // Left wall
-        const leftWall = new THREE.Mesh(
-            new THREE.BoxGeometry(DEPTH, WALL_HEIGHT, 0.01),
-            wallMaterial
-        );
-        leftWall.rotation.z = Math.PI / 2;
-        leftWall.rotation.y = Math.PI / 2;
-        leftWall.translateZ(-WIDTH / 2);
-        leftWall.translateY(WALL_HEIGHT / 2);
-
-        // Right wall
-        const rightWall = new THREE.Mesh(
-            new THREE.BoxGeometry(DEPTH, WALL_HEIGHT, 0.01),
-            wallMaterial
-        );
-        rightWall.rotation.z = Math.PI / 2;
-        rightWall.rotation.y = Math.PI / 2;
-        rightWall.translateZ(WIDTH / 2);
-        rightWall.translateY(WALL_HEIGHT / 2);
+        const wallGeometry = new THREE.PlaneGeometry(WIDTH, WALL_HEIGHT);
 
         // Back wall
-        const backWall = new THREE.Mesh(
-            new THREE.BoxGeometry(WIDTH, WALL_HEIGHT, 0.01),
-            wallMaterial
-        );
-        backWall.rotation.x = Math.PI / 2;
-        backWall.translateZ(DEPTH / 2);
-        backWall.translateY(WALL_HEIGHT / 2);
+        const backWall = new THREE.Mesh(wallGeometry, wallMaterial);
+        backWall.position.set(0, WALL_HEIGHT / 2, -WIDTH / 2);
+        backWall.receiveShadow = true;
+        this.scene.add(backWall);
 
-        walls.add(frontWall, leftWall, rightWall, backWall);
-        floor.add(walls);
+        // Front wall
+        const frontWall = new THREE.Mesh(wallGeometry, wallMaterial);
+        frontWall.position.set(0, WALL_HEIGHT / 2, WIDTH / 2);
+        frontWall.rotation.y = Math.PI;
+        frontWall.receiveShadow = true;
+        this.scene.add(frontWall);
 
+        // Left wall
+        const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
+        leftWall.position.set(-WIDTH / 2, WALL_HEIGHT / 2, 0);
+        leftWall.rotation.y = Math.PI / 2;
+        leftWall.receiveShadow = true;
+        this.scene.add(leftWall);
+
+        // Right wall
+        const rightWall = new THREE.Mesh(wallGeometry, wallMaterial);
+        rightWall.position.set(WIDTH / 2, WALL_HEIGHT / 2, 0);
+        rightWall.rotation.y = -Math.PI / 2;
+        rightWall.receiveShadow = true;
+        this.scene.add(rightWall);
+
+        const walls = { backWall, frontWall, leftWall, rightWall };
         this.objects.walls = walls;
         return walls;
     }
 
-    createCeiling(floor) {
-        const { WIDTH, DEPTH } = GALLERY_CONFIG.ROOM;
+    createCeiling() {
+        const { WIDTH, DEPTH, WALL_HEIGHT } = GALLERY_CONFIG.ROOM;
 
-        const geometry = new THREE.BoxGeometry(WIDTH, 0.01, DEPTH);
-        const material = new THREE.MeshBasicMaterial({
-            color: "grey",
-            side: THREE.DoubleSide
+        const geometry = new THREE.PlaneGeometry(WIDTH, DEPTH);
+        const material = new THREE.MeshLambertMaterial({
+            color: GALLERY_CONFIG.MATERIALS.CEILING.COLOR
         });
 
         const ceiling = new THREE.Mesh(geometry, material);
-        ceiling.rotation.x = -Math.PI / 2;
-        ceiling.translateY(-10 + 0.005);
+        ceiling.rotation.x = Math.PI / 2;
+        ceiling.position.y = WALL_HEIGHT;
 
-        floor.add(ceiling);
         this.objects.ceiling = ceiling;
+        this.scene.add(ceiling);
         return ceiling;
     }
 

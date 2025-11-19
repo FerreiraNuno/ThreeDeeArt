@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { GALLERY_CONFIG, KEY_MAPPINGS } from '../config/constants.js';
 
 /**
@@ -14,19 +15,10 @@ export class CameraManager {
             GALLERY_CONFIG.CAMERA.FAR
         );
 
-        this.camera.position.z = GALLERY_CONFIG.CAMERA.INITIAL_Z;
-        this.camera.position.y = GALLERY_CONFIG.CAMERA.INITIAL_Y;
+        this.camera.position.set(0, GALLERY_CONFIG.CAMERA.INITIAL_Y, GALLERY_CONFIG.CAMERA.INITIAL_Z);
 
-        // Mouse control variables
-        this.mouseX = 0;
-        this.mouseY = 0;
-        this.isMouseDown = false;
-        this.mouseSensitivity = 0.005;
-
-        // Camera rotation state (Euler angles)
-        this.yaw = 0; // horizontal rotation
-        this.pitch = 0; // vertical rotation
-        this.maxPitch = Math.PI / 2 - 0.1; // prevent looking too far up/down
+        // Setup pointer lock controls
+        this.controls = new PointerLockControls(this.camera, document.body);
 
         // Smooth keyboard movement state
         this.keys = {
@@ -40,59 +32,28 @@ export class CameraManager {
     }
 
     setupControls() {
-        this.setupMouseControls();
+        this.setupPointerLock();
         this.setupKeyboardControls();
     }
 
-    setupMouseControls() {
-        const canvas = this.renderer.domElement;
+    setupPointerLock() {
+        // Click to enable pointer lock
 
-        canvas.addEventListener('mousedown', (event) => {
-            this.isMouseDown = true;
-            this.mouseX = event.clientX;
-            this.mouseY = event.clientY;
-            canvas.style.cursor = 'grabbing';
+        // dragclick mouse to enable pointer lock
+        document.addEventListener('mousedown', (event) => {
+            if (event.button === 0) {
+                this.controls.lock();
+            }
         });
 
-        canvas.addEventListener('mouseup', () => {
-            this.isMouseDown = false;
-            canvas.style.cursor = 'grab';
+        // Listen for pointer lock events
+        this.controls.addEventListener('lock', () => {
+            console.log('Pointer locked');
         });
 
-        canvas.addEventListener('mouseleave', () => {
-            this.isMouseDown = false;
-            canvas.style.cursor = 'grab';
+        this.controls.addEventListener('unlock', () => {
+            console.log('Pointer unlocked');
         });
-
-        canvas.addEventListener('mousemove', (event) => {
-            if (!this.isMouseDown) return;
-
-            const deltaX = event.clientX - this.mouseX;
-            const deltaY = this.mouseY - event.clientY;
-
-            this.mouseX = event.clientX;
-            this.mouseY = event.clientY;
-
-            // Update camera rotation based on mouse movement
-            this.updateCameraRotation(deltaX, deltaY);
-        });
-
-        // Set initial cursor style
-        canvas.style.cursor = 'grab';
-    }
-
-    updateCameraRotation(deltaX, deltaY) {
-        // Update yaw (horizontal rotation) and pitch (vertical rotation)
-        this.yaw -= deltaX * this.mouseSensitivity;
-        this.pitch += deltaY * this.mouseSensitivity;
-
-        // Clamp pitch to prevent camera from flipping
-        this.pitch = Math.max(-this.maxPitch, Math.min(this.maxPitch, this.pitch));
-
-        // Apply rotation to camera without changing its position
-        this.camera.rotation.order = 'YXZ';
-        this.camera.rotation.y = this.yaw;
-        this.camera.rotation.x = this.pitch;
     }
 
     setupKeyboardControls() {
@@ -139,41 +100,40 @@ export class CameraManager {
             return; // No movement needed
         }
 
-        const moveSpeed = GALLERY_CONFIG.CAMERA.MOVE_SPEED * deltaTime * 60; // Normalize for 60fps
+        const moveSpeed = GALLERY_CONFIG.CAMERA.MOVE_SPEED * deltaTime;
 
-        // Get camera direction vectors
-        const forward = new THREE.Vector3();
-        this.camera.getWorldDirection(forward);
-        forward.y = 0; // Keep movement on XZ plane
-        forward.normalize();
+        // Create velocity vector
+        const velocity = new THREE.Vector3();
+
+        if (this.keys.forward) velocity.z -= 1;
+        if (this.keys.backward) velocity.z += 1;
+        if (this.keys.left) velocity.x -= 1;
+        if (this.keys.right) velocity.x += 1;
+
+        velocity.normalize();
+        velocity.multiplyScalar(moveSpeed);
+
+        // Apply movement relative to camera direction
+        const direction = new THREE.Vector3();
+        this.camera.getWorldDirection(direction);
+        direction.y = 0; // Keep movement horizontal
+        direction.normalize();
 
         const right = new THREE.Vector3();
-        right.crossVectors(this.camera.up, forward).normalize();
+        right.crossVectors(direction, this.camera.up);
 
-        const translation = new THREE.Vector3();
-
-        // Accumulate movement from all pressed keys
-        if (this.keys.forward) {
-            translation.add(forward.clone().multiplyScalar(moveSpeed));
-        }
-        if (this.keys.backward) {
-            translation.add(forward.clone().multiplyScalar(-moveSpeed));
-        }
-        if (this.keys.left) {
-            translation.add(right.clone().multiplyScalar(moveSpeed));
-        }
-        if (this.keys.right) {
-            translation.add(right.clone().multiplyScalar(-moveSpeed));
-        }
+        const movement = new THREE.Vector3();
+        movement.addScaledVector(direction, -velocity.z);
+        movement.addScaledVector(right, velocity.x);
 
         // Calculate new position
-        const newPosition = this.camera.position.clone().add(translation);
+        const newPosition = this.controls.getObject().position.clone().add(movement);
 
         // Apply boundary constraints
         this.applyBoundaryConstraints(newPosition);
 
         // Apply the constrained position
-        this.camera.position.copy(newPosition);
+        this.controls.getObject().position.copy(newPosition);
     }
 
     /**
@@ -211,6 +171,10 @@ export class CameraManager {
 
     getCamera() {
         return this.camera;
+    }
+
+    getControls() {
+        return this.controls;
     }
 
     updateAspectRatio() {

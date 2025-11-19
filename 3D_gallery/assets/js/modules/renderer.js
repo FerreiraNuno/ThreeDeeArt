@@ -17,6 +17,15 @@ export class RendererManager {
     setupRenderer() {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setClearColor(GALLERY_CONFIG.RENDERER.BACKGROUND_COLOR, 1);
+
+        // Enable shadows
+        if (GALLERY_CONFIG.RENDERER.SHADOWS) {
+            this.renderer.shadowMap.enabled = true;
+            this.renderer.shadowMap.type = GALLERY_CONFIG.RENDERER.SHADOW_TYPE === 'PCFSoft'
+                ? THREE.PCFSoftShadowMap
+                : THREE.BasicShadowMap;
+        }
+
         document.body.appendChild(this.renderer.domElement);
     }
 

@@ -38,8 +38,8 @@ class GalleryApp {
             this.managers.geometry = new GeometryManager(this.managers.scene.getScene());
             this.setupScene();
 
-            // Add camera to scene
-            this.managers.scene.add(this.managers.camera.getCamera());
+            // Add camera controls to scene (PointerLockControls manages the camera)
+            this.managers.scene.add(this.managers.camera.getControls().getObject());
 
             // Start the render loop
             this.start();
@@ -58,13 +58,13 @@ class GalleryApp {
         this.managers.geometry.createTestCube();
 
         // Create floor
-        const floor = this.managers.geometry.createFloor();
+        this.managers.geometry.createFloor();
 
-        // Create walls attached to floor
-        this.managers.geometry.createWalls(floor);
+        // Create walls
+        this.managers.geometry.createWalls();
 
         // Create ceiling
-        this.managers.geometry.createCeiling(floor);
+        this.managers.geometry.createCeiling();
     }
 
     /**
