@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GALLERY_CONFIG } from '../config/constants.js';
+import { vertexShader, fragmentShader} from './shader.js';
 
 /**
  * Geometry and objects management module
@@ -11,15 +12,21 @@ export class GeometryManager {
         this.textureLoader = new THREE.TextureLoader();
     }
 
+    //hier auch BB-Box
     createTestCube() {
         const geometry = new THREE.BoxGeometry(1, 1, 1);
         const material = new THREE.MeshLambertMaterial({
             color: GALLERY_CONFIG.MATERIALS.CUBE.COLOR
         });
         const cube = new THREE.Mesh(geometry, material);
-        cube.position.set(0, 1, 0); // Center of room, sitting properly on floor
+        cube.position.set(-10, 1, -10); // Center of room, sitting properly on floor
         cube.castShadow = true;
         cube.receiveShadow = true;
+
+        cube.BBox = new THREE.Box3().setFromObject(cube);
+        //kann später gelöscht werden
+        const bboxHelper = new THREE.Box3Helper(cube.BBox, 0x0000ff);
+        this.scene.add(bboxHelper);
 
         this.objects.cube = cube;
         this.scene.add(cube);
@@ -95,16 +102,30 @@ export class GeometryManager {
 
         const walls = { backWall, frontWall, leftWall, rightWall };
         this.objects.walls = walls;
+        
+        // brauchen wir das???
+        for (const wall of Object.values(walls)){
+            wall.BBox = new THREE.Box3().setFromObject(wall);
+            //kann später gelöscht werden !!!!!
+            const helper = new THREE.Box3Helper(wall.BBox, 0xff0000);
+            this.scene.add(helper);
+        }
         return walls;
     }
 
     createCeiling() {
         const { WIDTH, DEPTH, WALL_HEIGHT } = GALLERY_CONFIG.ROOM;
+        const ceilingTexture = this.textureLoader.load(GALLERY_CONFIG.TEXTURES.CEILING);
 
-        const geometry = new THREE.PlaneGeometry(WIDTH, DEPTH);
+        ceilingTexture.wrapS = THREE.RepeatWrapping;
+        ceilingTexture.wrapT = THREE.RepeatWrapping;
+        const repeat = GALLERY_CONFIG.TEXTURE_REPEAT.CEILING;
+        ceilingTexture.repeat.set(repeat.x, repeat.y);
+
         const material = new THREE.MeshLambertMaterial({
-            color: GALLERY_CONFIG.MATERIALS.CEILING.COLOR
+        map: ceilingTexture
         });
+        const geometry = new THREE.PlaneGeometry(WIDTH, DEPTH);
 
         const ceiling = new THREE.Mesh(geometry, material);
         ceiling.rotation.x = Math.PI / 2;
@@ -113,6 +134,21 @@ export class GeometryManager {
         this.objects.ceiling = ceiling;
         this.scene.add(ceiling);
         return ceiling;
+    }
+
+    createPainting(imageURL, width, height, position, rotation) {
+        const textureLoader = new THREE.TextureLoader();
+        const paintingTexture = textureLoader.load(imageURL);
+        const paintingMaterial = new THREE.MeshLambertMaterial({
+           map: paintingTexture, 
+        });
+        const paintingGeometry = new THREE.PlaneGeometry(width, height);
+        const painting = new THREE.Mesh(paintingGeometry, paintingMaterial);
+        painting.position.set(position.x, position.y, position.z);
+        painting.rotation.set(rotation.x, rotation.y, rotation.z);
+        this.scene.add(painting);
+        this.objects[imageURL] = painting;
+        return painting;
     }
 
     getObjects() {
@@ -127,3 +163,4 @@ export class GeometryManager {
         }
     }
 }
+

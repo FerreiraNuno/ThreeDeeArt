@@ -31,6 +31,11 @@ export class CameraManager {
         this.setupControls();
     }
 
+    setGeometryManager(geometryManager) {
+        this.geometryManager = geometryManager;
+    }
+
+
     setupControls() {
         this.setupPointerLock();
         this.setupKeyboardControls();
@@ -101,8 +106,6 @@ export class CameraManager {
         }
 
         const moveSpeed = GALLERY_CONFIG.CAMERA.MOVE_SPEED * deltaTime;
-
-        // Create velocity vector
         const velocity = new THREE.Vector3();
 
         if (this.keys.forward) velocity.z -= 1;
@@ -125,18 +128,68 @@ export class CameraManager {
         const movement = new THREE.Vector3();
         movement.addScaledVector(direction, -velocity.z);
         movement.addScaledVector(right, velocity.x);
+        
+        
+        const previousPosition = this.controls.getObject().position.clone(); //vorherige Position merken
+        const newPosition = previousPosition.clone().add(movement);
 
-        // Calculate new position
-        const newPosition = this.controls.getObject().position.clone().add(movement);
+        // Temporäre Kamera-BoundingBox für die geplante Position
+        const tempPlayerBB = new THREE.Box3().setFromCenterAndSize(
+            newPosition,
+            new THREE.Vector3(1,1,1)  // gleiche Größe wie in checkCollision()
+        );
 
-        // Apply boundary constraints
-        this.applyBoundaryConstraints(newPosition);
+        // Kollision checken
+        let collided = false;
+        const cube = this.geometryManager.getObjects().cube;
+        if (tempPlayerBB.intersectsBox(cube.BBox)) {
+            collided = true;
+            console.log('Kollision!');
+        }
 
-        // Apply the constrained position
-        this.controls.getObject().position.copy(newPosition);
+        // Wenn keine Kollision -> Kamera bewegen
+        if (!collided) {
+            this.controls.getObject().position.copy(newPosition);
+            this.applyBoundaryConstraints(this.controls.getObject().position);
+        }   
+    }
+    
+    checkCollision() {
+        const playerBB = new THREE.Box3();
+        const cameraWorldPos = new THREE.Vector3();
+
+        this.controls.getObject().getWorldPosition(cameraWorldPos);    //camera repräsentiert player's position -> camera position in vector
+        playerBB.setFromCenterAndSize(  //BB wird gesetzt quasi um Player(=camera)
+            cameraWorldPos,
+            new THREE.Vector3(1, 1, 1)
+        );
+
+        // Cube aus GeometryManager holen
+        const cube = this.geometryManager.getObjects().cube;
+        
+        if (playerBB.intersectsBox(cube.BBox)) {
+            console.log('Kollision!');
+            return true;
+        }
+
+        return false;
+
+        /*
+        const walls = this.geometryManager.getObjects().walls;
+        for (const wall of Object.values(walls)){
+            if(playerBB.intersectsBox(wall.BBox)){
+                return true;
+            }
+        }
+        return false;
+        */
     }
 
-    /**
+
+    
+    
+    /** -------- SPÄTER DURCH KOLLISIONSABFRAGE ERSETZEN?! -------
+     * 
      * Apply boundary constraints to keep camera within room bounds
      * @param {THREE.Vector3} position - The position to constrain
      */
@@ -163,6 +216,7 @@ export class CameraManager {
         // Constrain Y position (floor/ceiling)
         position.y = Math.max(bounds.MIN_Y, Math.min(bounds.MAX_Y, position.y));
     }
+    
 
     update(deltaTime) {
         // Update smooth keyboard movement
