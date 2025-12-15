@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GALLERY_CONFIG } from '../config/constants.js';
-import { vertexShader, fragmentShader} from './shader.js';
+import { vertexShader, fragmentShader } from './shader.js';
 
 /**
  * Geometry and objects management module
@@ -12,7 +12,7 @@ export class GeometryManager {
         this.textureLoader = new THREE.TextureLoader();
     }
 
-    //hier auch BB-Box
+    //hier auch BBox
     createTestCube() {
         const geometry = new THREE.BoxGeometry(1, 1, 1);
         const material = new THREE.MeshLambertMaterial({
@@ -102,9 +102,9 @@ export class GeometryManager {
 
         const walls = { backWall, frontWall, leftWall, rightWall };
         this.objects.walls = walls;
-        
+
         // brauchen wir das???
-        for (const wall of Object.values(walls)){
+        for (const wall of Object.values(walls)) {
             wall.BBox = new THREE.Box3().setFromObject(wall);
             //kann später gelöscht werden !!!!!
             const helper = new THREE.Box3Helper(wall.BBox, 0xff0000);
@@ -123,7 +123,7 @@ export class GeometryManager {
         ceilingTexture.repeat.set(repeat.x, repeat.y);
 
         const material = new THREE.MeshLambertMaterial({
-        map: ceilingTexture
+            map: ceilingTexture
         });
         const geometry = new THREE.PlaneGeometry(WIDTH, DEPTH);
 
@@ -140,7 +140,7 @@ export class GeometryManager {
         const textureLoader = new THREE.TextureLoader();
         const paintingTexture = textureLoader.load(imageURL);
         const paintingMaterial = new THREE.MeshLambertMaterial({
-           map: paintingTexture, 
+            map: paintingTexture,
         });
         const paintingGeometry = new THREE.PlaneGeometry(width, height);
         const painting = new THREE.Mesh(paintingGeometry, paintingMaterial);

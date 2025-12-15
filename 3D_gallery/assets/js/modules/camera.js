@@ -100,7 +100,7 @@ export class CameraManager {
         }
     }
 
-    updateMovement(deltaTime = 1 / 60) {
+    updateMovement(deltaTime) {
         if (!this.keys.forward && !this.keys.backward && !this.keys.left && !this.keys.right) {
             return; // No movement needed
         }
@@ -116,30 +116,28 @@ export class CameraManager {
         velocity.normalize();
         velocity.multiplyScalar(moveSpeed);
 
-        // Apply movement relative to camera direction
+        // get direction where the camera is pointing
         const direction = new THREE.Vector3();
         this.camera.getWorldDirection(direction);
         direction.y = 0; // Keep movement horizontal
         direction.normalize();
-
         const right = new THREE.Vector3();
         right.crossVectors(direction, this.camera.up);
 
         const movement = new THREE.Vector3();
         movement.addScaledVector(direction, -velocity.z);
         movement.addScaledVector(right, velocity.x);
-        
-        
+
         const previousPosition = this.controls.getObject().position.clone(); //vorherige Position merken
         const newPosition = previousPosition.clone().add(movement);
 
         // Temporäre Kamera-BoundingBox für die geplante Position
         const tempPlayerBB = new THREE.Box3().setFromCenterAndSize(
             newPosition,
-            new THREE.Vector3(1,1,1)  // gleiche Größe wie in checkCollision()
+            new THREE.Vector3(1, 1, 1)
         );
 
-        // Kollision checken
+        // Kollision mit Objekt checken
         let collided = false;
         const cube = this.geometryManager.getObjects().cube;
         if (tempPlayerBB.intersectsBox(cube.BBox)) {
@@ -151,60 +149,25 @@ export class CameraManager {
         if (!collided) {
             this.controls.getObject().position.copy(newPosition);
             this.applyBoundaryConstraints(this.controls.getObject().position);
-        }   
-    }
-    
-    checkCollision() {
-        const playerBB = new THREE.Box3();
-        const cameraWorldPos = new THREE.Vector3();
-
-        this.controls.getObject().getWorldPosition(cameraWorldPos);    //camera repräsentiert player's position -> camera position in vector
-        playerBB.setFromCenterAndSize(  //BB wird gesetzt quasi um Player(=camera)
-            cameraWorldPos,
-            new THREE.Vector3(1, 1, 1)
-        );
-
-        // Cube aus GeometryManager holen
-        const cube = this.geometryManager.getObjects().cube;
-        
-        if (playerBB.intersectsBox(cube.BBox)) {
-            console.log('Kollision!');
-            return true;
         }
-
-        return false;
-
-        /*
-        const walls = this.geometryManager.getObjects().walls;
-        for (const wall of Object.values(walls)){
-            if(playerBB.intersectsBox(wall.BBox)){
-                return true;
-            }
-        }
-        return false;
-        */
     }
 
-
-    
-    
-    /** -------- SPÄTER DURCH KOLLISIONSABFRAGE ERSETZEN?! -------
-     * 
-     * Apply boundary constraints to keep camera within room bounds
-     * @param {THREE.Vector3} position - The position to constrain
-     */
+    /**
+    * Is called every frame. It checks if the camera has surpassed the boundaries of the room
+    * and places it back to the room before the frame is rendered.
+    * This allows the camera to still move at an angle to the walls.
+    */
     applyBoundaryConstraints(position) {
+        // Room dimensions
         const { WIDTH, DEPTH, WALL_HEIGHT } = GALLERY_CONFIG.ROOM;
+        // Distance from walls where collision detection starts
         const buffer = GALLERY_CONFIG.CAMERA.BOUNDARY_BUFFER;
 
-        // Calculate dynamic boundaries based on room dimensions
         const bounds = {
             MIN_X: -WIDTH / 2 + buffer,
             MAX_X: WIDTH / 2 - buffer,
             MIN_Z: -DEPTH / 2 + buffer,
             MAX_Z: DEPTH / 2 - buffer,
-            MIN_Y: 0,  // Floor is at -1, so camera should stay above 0
-            MAX_Y: WALL_HEIGHT - 2  // Ceiling height minus buffer
         };
 
         // Constrain X position (left/right walls)
@@ -212,11 +175,15 @@ export class CameraManager {
 
         // Constrain Z position (front/back walls)
         position.z = Math.max(bounds.MIN_Z, Math.min(bounds.MAX_Z, position.z));
-
-        // Constrain Y position (floor/ceiling)
-        position.y = Math.max(bounds.MIN_Y, Math.min(bounds.MAX_Y, position.y));
     }
-    
+
+    checkCollisionWithObject() {
+        const object = this.geometryManager.getObjects().object;
+        if (object.BBox.intersects(this.camera.BBox)) {
+            return true;
+        }
+        return false;
+    }
 
     update(deltaTime) {
         // Update smooth keyboard movement

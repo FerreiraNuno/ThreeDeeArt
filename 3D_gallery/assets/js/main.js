@@ -36,7 +36,7 @@ class GalleryApp {
 
             // Initialize geometry and objects
             this.managers.geometry = new GeometryManager(this.managers.scene.getScene());
-            
+
             //Manager miteinander koppeln, da CameraManager nicht von selbst weiß, dass GeometryManager existiert
             this.managers.camera.setGeometryManager(this.managers.geometry);
 
@@ -72,20 +72,20 @@ class GalleryApp {
 
         // Create paintings
         this.managers.geometry.createPainting(
-            'assets/images/vanGogh.jpg', 
-            8, 
-            4, 
+            'assets/images/vanGogh.jpg',
+            8,
+            4,
             new THREE.Vector3(-12.49, 4, 0),
-            new THREE.Vector3(0, Math.PI/2, 0)
-            );
-        
+            new THREE.Vector3(0, Math.PI / 2, 0)
+        );
+
         this.managers.geometry.createPainting(
-            'assets/images/vanGogh2.jpg', 
-            8, 
-            4, 
+            'assets/images/vanGogh2.jpg',
+            8,
+            4,
             new THREE.Vector3(12.49, 4, 0),
-            new THREE.Vector3(0, -Math.PI/2, 0)
-            );
+            new THREE.Vector3(0, -Math.PI / 2, 0)
+        );
     }
 
     /**
@@ -119,7 +119,7 @@ class GalleryApp {
 
         // Update camera controls with delta time for smooth movement
         this.managers.camera.update(deltaTime);
-        
+
         /* später für Fraktale braucht man eigene Shader-Materialien -> uniforms.time!!!
 
         Shader-Zeit für alle Shader-Materialien aktualisieren
