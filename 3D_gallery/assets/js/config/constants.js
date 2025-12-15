@@ -16,7 +16,11 @@ export const GALLERY_CONFIG = {
         INITIAL_Y: 1.6, // Eye level height
         MOVE_SPEED: 5,
         // Collision boundary buffer from walls
-        BOUNDARY_BUFFER: 0.5
+        BOUNDARY_BUFFER: 0.5,
+        // Jump physics
+        JUMP_VELOCITY: 8,
+        GRAVITY: -25,
+        GROUND_LEVEL: 1.6
     },
 
     // Lighting
@@ -106,5 +110,6 @@ export const KEY_MAPPINGS = {
     FORWARD: 'KeyW',
     BACKWARD: 'KeyS',
     LEFT: 'KeyA',
-    RIGHT: 'KeyD'
+    RIGHT: 'KeyD',
+    JUMP: 'Space'
 };

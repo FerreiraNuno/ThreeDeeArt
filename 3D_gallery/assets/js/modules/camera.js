@@ -25,7 +25,15 @@ export class CameraManager {
             forward: false,
             backward: false,
             left: false,
-            right: false
+            right: false,
+            jump: false
+        };
+
+        // Jump physics state
+        this.jumpState = {
+            isJumping: false,
+            verticalVelocity: 0,
+            isOnGround: true
         };
 
         this.setupControls();
@@ -80,6 +88,9 @@ export class CameraManager {
             case KEY_MAPPINGS.RIGHT:
                 this.keys.right = true;
                 break;
+            case KEY_MAPPINGS.JUMP:
+                this.keys.jump = true;
+                break;
         }
     }
 
@@ -97,12 +108,48 @@ export class CameraManager {
             case KEY_MAPPINGS.RIGHT:
                 this.keys.right = false;
                 break;
+            case KEY_MAPPINGS.JUMP:
+                this.keys.jump = false;
+                break;
+        }
+    }
+
+    updateJumpPhysics(deltaTime) {
+        const currentPosition = this.controls.getObject().position;
+        const groundLevel = GALLERY_CONFIG.CAMERA.GROUND_LEVEL;
+
+        // Check if player is on ground
+        this.jumpState.isOnGround = currentPosition.y <= groundLevel;
+
+        // Handle jump input
+        if (this.keys.jump && this.jumpState.isOnGround && !this.jumpState.isJumping) {
+            this.jumpState.isJumping = true;
+            this.jumpState.verticalVelocity = GALLERY_CONFIG.CAMERA.JUMP_VELOCITY;
+            this.jumpState.isOnGround = false;
+        }
+
+        // Apply gravity and update vertical position
+        if (this.jumpState.isJumping || !this.jumpState.isOnGround) {
+            this.jumpState.verticalVelocity += GALLERY_CONFIG.CAMERA.GRAVITY * deltaTime;
+            currentPosition.y += this.jumpState.verticalVelocity * deltaTime;
+
+            // Check if landed
+            if (currentPosition.y <= groundLevel) {
+                currentPosition.y = groundLevel;
+                this.jumpState.verticalVelocity = 0;
+                this.jumpState.isJumping = false;
+                this.jumpState.isOnGround = true;
+            }
         }
     }
 
     updateMovement(deltaTime) {
+        // Update jump physics first
+        this.updateJumpPhysics(deltaTime);
+
+        // Handle horizontal movement
         if (!this.keys.forward && !this.keys.backward && !this.keys.left && !this.keys.right) {
-            return; // No movement needed
+            return; // No horizontal movement needed
         }
 
         const moveSpeed = GALLERY_CONFIG.CAMERA.MOVE_SPEED * deltaTime;
@@ -130,6 +177,9 @@ export class CameraManager {
 
         const previousPosition = this.controls.getObject().position.clone(); //vorherige Position merken
         const newPosition = previousPosition.clone().add(movement);
+
+        // Preserve the Y position from jump physics
+        newPosition.y = previousPosition.y;
 
         // Temporäre Kamera-BoundingBox für die geplante Position
         const tempPlayerBB = new THREE.Box3().setFromCenterAndSize(
