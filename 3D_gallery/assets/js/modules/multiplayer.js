@@ -121,14 +121,13 @@ export class MultiplayerManager {
     addRemotePlayer(playerData) {
         if (this.remotePlayers.has(playerData.id)) return;
 
-        // Create person prop for the remote player at ground level
-        // Handle initial jumping state if player joins while jumping
+        const footOffset = -0.23; // Calculated from person geometry: hip(0.9) + foot(-0.67) = 0.23
         const initialY = playerData.position.y > 1.6 ?
-            (playerData.position.y - 1.6) : 0;
+            (playerData.position.y - 1.6 + footOffset) : footOffset;
 
         const groundPosition = new THREE.Vector3(
             playerData.position.x,
-            initialY, // Place on ground level or jumping height
+            initialY, // Place feet on ground level or jumping height
             playerData.position.z
         );
 
@@ -192,8 +191,10 @@ export class MultiplayerManager {
 
             // Convert camera position to ground-level player position
             // Handle jumping by preserving Y position if player is above ground
+            // Account for person's foot offset (feet are 0.23 units above person group origin)
+            const footOffset = -0.23; // Calculated from person geometry: hip(0.9) + foot(-0.67) = 0.23
             const targetY = movementData.position.y > 1.6 ?
-                (movementData.position.y - 1.6) : 0; // Offset by camera height
+                (movementData.position.y - 1.6 + footOffset) : footOffset; // Offset by camera height and foot position
 
             const targetPosition = new THREE.Vector3(
                 movementData.position.x,
@@ -260,7 +261,7 @@ export class MultiplayerManager {
                 z: rotation.z
             },
             // Add movement state for animations
-            isJumping: position.y > 1.6 + 0.1, // Jumping if above ground + threshold
+            isJumping: position.y > 1.6 + 0.1, // Jumping if above camera ground level + threshold
             timestamp: Date.now()
         });
 
