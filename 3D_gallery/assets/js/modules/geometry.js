@@ -187,15 +187,15 @@ export class GeometryManager {
         return this.objects;
     }
 
-    animateObjects() {
+    animateObjects(deltaTime = 0.016) {
         if (this.objects.cube) {
             const speed = GALLERY_CONFIG.ANIMATION.CUBE_ROTATION_SPEED;
             this.objects.cube.rotation.y += speed;
             this.objects.cube.rotation.z += speed;
         }
-
-        // Animate persons
-        this.personManager.animatePersons();
+        
+        // Animate persons with deltaTime for smooth animations
+        this.personManager.animatePersons(deltaTime);
     }
 }
 

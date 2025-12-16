@@ -8,6 +8,9 @@
   <link rel="stylesheet" href="assets/css/main.css">
   <link rel="stylesheet" href="assets/css/gallery.css">
 
+  <!-- Socket.IO for multiplayer functionality -->
+  <script src="/socket.io/socket.io.js"></script>
+
   <!-- Import map for module resolution -->
   <script type="importmap">
   {
@@ -22,6 +25,8 @@
 <body>
   <div id="info">
     Click to lock mouse and look around, WASD to move, Space to jump, ESC to unlock
+    <br>
+    <span id="multiplayer-status">Connecting to multiplayer...</span>
   </div>
   <script type="module" src="assets/js/main.js"></script>
 </body>

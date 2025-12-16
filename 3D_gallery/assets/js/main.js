@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CameraManager } from './modules/camera.js';
 import { LightingManager } from './modules/lighting.js';
 import { GeometryManager } from './modules/geometry.js';
+import { MultiplayerManager } from './modules/multiplayer.js';
 import { GALLERY_CONFIG } from './config/constants.js';
 
 /**
@@ -106,6 +107,13 @@ class GalleryApp {
         this.managers.camera = new CameraManager(this.managers.renderer.getRenderer());
         this.managers.lighting = new LightingManager(this.managers.scene.getScene());
         this.managers.geometry = new GeometryManager(this.managers.scene.getScene());
+
+        // Initialize multiplayer manager
+        this.managers.multiplayer = new MultiplayerManager(
+            this.managers.scene.getScene(),
+            this.managers.geometry.getPersonManager(),
+            this.managers.camera
+        );
     }
 
     /**
@@ -124,6 +132,28 @@ class GalleryApp {
      */
     setupEventListeners() {
         window.addEventListener('resize', () => this.handleResize());
+
+        // Update multiplayer status periodically
+        setInterval(() => this.updateMultiplayerStatus(), 1000);
+    }
+
+    /**
+     * Update multiplayer status in the UI
+     */
+    updateMultiplayerStatus() {
+        const statusElement = document.getElementById('multiplayer-status');
+        if (statusElement && this.managers.multiplayer) {
+            const isConnected = this.managers.multiplayer.isMultiplayerConnected();
+            const playerCount = this.managers.multiplayer.getPlayerCount();
+
+            if (isConnected) {
+                statusElement.textContent = `Multiplayer: Connected (${playerCount} player${playerCount !== 1 ? 's' : ''})`;
+                statusElement.style.color = '#4ecdc4';
+            } else {
+                statusElement.textContent = 'Multiplayer: Disconnected';
+                statusElement.style.color = '#ff6b6b';
+            }
+        }
     }
 
     /**
@@ -142,9 +172,6 @@ class GalleryApp {
         this.managers.geometry.createFloor();
         this.managers.geometry.createWalls();
         this.managers.geometry.createCeiling();
-
-        // Add player prop in the center of the room
-        this.managers.geometry.createPlayerProp(new THREE.Vector3(0, 0, 0));
     }
 
     /**
@@ -225,8 +252,15 @@ class GalleryApp {
         // Update camera controls with delta time for smooth movement
         this.managers.camera.update(deltaTime);
 
-        // Animate objects
-        this.managers.geometry.animateObjects();
+        // Send multiplayer movement updates
+        if (this.managers.multiplayer && this.managers.multiplayer.isMultiplayerConnected()) {
+            const cameraPosition = this.managers.camera.getPosition();
+            const cameraRotation = this.managers.camera.getRotation();
+            this.managers.multiplayer.sendMovement(cameraPosition, cameraRotation);
+        }
+
+        // Animate objects with deltaTime for smooth animations
+        this.managers.geometry.animateObjects(deltaTime);
 
         // TODO: Future shader material time updates for fractals
         // this.updateShaderUniforms(currentTime);

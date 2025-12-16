@@ -258,4 +258,36 @@ export class CameraManager {
         this.camera.getWorldDirection(direction);
         return direction;
     }
+
+    /**
+     * Get the current camera position
+     * @returns {THREE.Vector3} Current camera position
+     */
+    getPosition() {
+        return this.controls.getObject().position.clone();
+    }
+
+    /**
+     * Get the current camera rotation
+     * @returns {THREE.Euler} Current camera rotation
+     */
+    getRotation() {
+        return this.controls.getObject().rotation.clone();
+    }
+
+    /**
+     * Set the camera position (for multiplayer synchronization if needed)
+     * @param {THREE.Vector3} position - New position
+     */
+    setPosition(position) {
+        this.controls.getObject().position.copy(position);
+    }
+
+    /**
+     * Set the camera rotation (for multiplayer synchronization if needed)
+     * @param {THREE.Euler} rotation - New rotation
+     */
+    setRotation(rotation) {
+        this.controls.getObject().rotation.copy(rotation);
+    }
 }
