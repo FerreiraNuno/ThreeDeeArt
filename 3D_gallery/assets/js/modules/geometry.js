@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GALLERY_CONFIG } from '../config/constants.js';
 import { vertexShader, fragmentShader } from './shader.js';
+import { PersonManager } from './person.js';
 
 /**
  * Geometry and objects management module
@@ -10,6 +11,7 @@ export class GeometryManager {
         this.scene = scene;
         this.objects = {};
         this.textureLoader = new THREE.TextureLoader();
+        this.personManager = new PersonManager(scene);
     }
 
     //hier auch BBox
@@ -151,6 +153,36 @@ export class GeometryManager {
         return painting;
     }
 
+    /**
+     * Create a player prop using the PersonManager
+     * @param {THREE.Vector3} position - Position to place the player
+     * @param {Object} options - Customization options
+     * @returns {THREE.Group} The player group object
+     */
+    createPlayerProp(position = new THREE.Vector3(0, 0, 0), options = {}) {
+        const player = this.personManager.createPlayerProp(position, options);
+        this.objects.player = player;
+        return player;
+    }
+
+    /**
+     * Create a person using the PersonManager
+     * @param {THREE.Vector3} position - Position to place the person
+     * @param {Object} options - Customization options
+     * @returns {THREE.Group} The person group object
+     */
+    createPerson(position = new THREE.Vector3(0, 0, 0), options = {}) {
+        return this.personManager.createPerson(position, options);
+    }
+
+    /**
+     * Get the PersonManager instance
+     * @returns {PersonManager} The person manager
+     */
+    getPersonManager() {
+        return this.personManager;
+    }
+
     getObjects() {
         return this.objects;
     }
@@ -161,6 +193,9 @@ export class GeometryManager {
             this.objects.cube.rotation.y += speed;
             this.objects.cube.rotation.z += speed;
         }
+
+        // Animate persons
+        this.personManager.animatePersons();
     }
 }
 

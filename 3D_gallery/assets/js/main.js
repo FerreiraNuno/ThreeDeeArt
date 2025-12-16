@@ -1,14 +1,73 @@
-/**
- * 3D Gallery Main Application
- * Refactored modular architecture for better maintainability
- */
-
 import * as THREE from 'three';
-import { SceneManager } from './modules/scene.js';
 import { CameraManager } from './modules/camera.js';
-import { RendererManager } from './modules/renderer.js';
 import { LightingManager } from './modules/lighting.js';
 import { GeometryManager } from './modules/geometry.js';
+import { GALLERY_CONFIG } from './config/constants.js';
+
+/**
+ * Renderer management class
+ */
+class RendererManager {
+    constructor() {
+        this.renderer = new THREE.WebGLRenderer({
+            antialias: GALLERY_CONFIG.RENDERER.ANTIALIAS
+        });
+
+        this.setupRenderer();
+    }
+
+    setupRenderer() {
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setClearColor(GALLERY_CONFIG.RENDERER.BACKGROUND_COLOR, 1);
+
+        // Enable shadows
+        if (GALLERY_CONFIG.RENDERER.SHADOWS) {
+            this.renderer.shadowMap.enabled = true;
+            this.renderer.shadowMap.type = GALLERY_CONFIG.RENDERER.SHADOW_TYPE === 'PCFSoft'
+                ? THREE.PCFSoftShadowMap
+                : THREE.BasicShadowMap;
+        }
+
+        document.body.appendChild(this.renderer.domElement);
+    }
+
+    handleResize() {
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    render(scene, camera) {
+        this.renderer.render(scene, camera);
+    }
+
+    getRenderer() {
+        return this.renderer;
+    }
+
+    getDomElement() {
+        return this.renderer.domElement;
+    }
+}
+
+/**
+ * Scene management class
+ */
+class SceneManager {
+    constructor() {
+        this.scene = new THREE.Scene();
+    }
+
+    getScene() {
+        return this.scene;
+    }
+
+    add(object) {
+        this.scene.add(object);
+    }
+
+    remove(object) {
+        this.scene.remove(object);
+    }
+}
 
 /**
  * Main Gallery Application Class
@@ -26,26 +85,10 @@ class GalleryApp {
      */
     init() {
         try {
-            // Initialize core managers
-            this.managers.scene = new SceneManager();
-            this.managers.renderer = new RendererManager();
-            this.managers.camera = new CameraManager(this.managers.renderer.getRenderer());
-
-            // Initialize lighting
-            this.managers.lighting = new LightingManager(this.managers.scene.getScene());
-
-            // Initialize geometry and objects
-            this.managers.geometry = new GeometryManager(this.managers.scene.getScene());
-
-            //Manager miteinander koppeln, da CameraManager nicht von selbst weiß, dass GeometryManager existiert
-            this.managers.camera.setGeometryManager(this.managers.geometry);
-
+            this.initializeManagers();
+            this.setupManagerConnections();
             this.setupScene();
-
-            // Add camera controls to scene (PointerLockControls manages the camera)
-            this.managers.scene.add(this.managers.camera.getControls().getObject());
-
-            // Start the render loop
+            this.setupEventListeners();
             this.start();
 
             console.log('3D Gallery initialized successfully');
@@ -55,37 +98,85 @@ class GalleryApp {
     }
 
     /**
+     * Initialize all core managers
+     */
+    initializeManagers() {
+        this.managers.scene = new SceneManager();
+        this.managers.renderer = new RendererManager();
+        this.managers.camera = new CameraManager(this.managers.renderer.getRenderer());
+        this.managers.lighting = new LightingManager(this.managers.scene.getScene());
+        this.managers.geometry = new GeometryManager(this.managers.scene.getScene());
+    }
+
+    /**
+     * Setup connections between managers
+     */
+    setupManagerConnections() {
+        // Connect camera manager with geometry manager for collision detection
+        this.managers.camera.setGeometryManager(this.managers.geometry);
+
+        // Add camera controls to scene (PointerLockControls manages the camera)
+        this.managers.scene.add(this.managers.camera.getControls().getObject());
+    }
+
+    /**
+     * Setup event listeners
+     */
+    setupEventListeners() {
+        window.addEventListener('resize', () => this.handleResize());
+    }
+
+    /**
      * Setup the 3D scene with all objects
      */
     setupScene() {
-        // Create test cube
+        this.createGalleryStructure();
+        this.createArtworks();
+    }
+
+    /**
+     * Create the basic gallery structure (floor, walls, ceiling)
+     */
+    createGalleryStructure() {
         this.managers.geometry.createTestCube();
-
-        // Create floor
         this.managers.geometry.createFloor();
-
-        // Create walls
         this.managers.geometry.createWalls();
-
-        // Create ceiling
         this.managers.geometry.createCeiling();
 
-        // Create paintings
-        this.managers.geometry.createPainting(
-            'assets/images/vanGogh.jpg',
-            8,
-            4,
-            new THREE.Vector3(-12.49, 4, 0),
-            new THREE.Vector3(0, Math.PI / 2, 0)
-        );
+        // Add player prop in the center of the room
+        this.managers.geometry.createPlayerProp(new THREE.Vector3(0, 0, 0));
+    }
 
-        this.managers.geometry.createPainting(
-            'assets/images/vanGogh2.jpg',
-            8,
-            4,
-            new THREE.Vector3(12.49, 4, 0),
-            new THREE.Vector3(0, -Math.PI / 2, 0)
-        );
+    /**
+     * Create and position artworks in the gallery
+     */
+    createArtworks() {
+        const paintings = [
+            {
+                image: 'assets/images/vanGogh.jpg',
+                width: 8,
+                height: 4,
+                position: new THREE.Vector3(-12.49, 4, 0),
+                rotation: new THREE.Vector3(0, Math.PI / 2, 0)
+            },
+            {
+                image: 'assets/images/vanGogh2.jpg',
+                width: 8,
+                height: 4,
+                position: new THREE.Vector3(12.49, 4, 0),
+                rotation: new THREE.Vector3(0, -Math.PI / 2, 0)
+            }
+        ];
+
+        paintings.forEach(painting => {
+            this.managers.geometry.createPainting(
+                painting.image,
+                painting.width,
+                painting.height,
+                painting.position,
+                painting.rotation
+            );
+        });
     }
 
     /**
@@ -113,27 +204,49 @@ class GalleryApp {
 
         requestAnimationFrame((time) => this.animate(time));
 
-        // Calculate delta time in seconds
+        const deltaTime = this.calculateDeltaTime(currentTime);
+        this.updateScene(deltaTime, currentTime);
+        this.renderScene();
+    }
+
+    /**
+     * Calculate delta time for smooth animations
+     */
+    calculateDeltaTime(currentTime) {
         const deltaTime = this.lastTime === 0 ? 0 : (currentTime - this.lastTime) / 1000;
         this.lastTime = currentTime;
+        return deltaTime;
+    }
 
+    /**
+     * Update all scene elements
+     */
+    updateScene(deltaTime, currentTime) {
         // Update camera controls with delta time for smooth movement
         this.managers.camera.update(deltaTime);
 
-        /* später für Fraktale braucht man eigene Shader-Materialien -> uniforms.time!!!
+        // Animate objects
+        this.managers.geometry.animateObjects();
 
-        Shader-Zeit für alle Shader-Materialien aktualisieren
+        // TODO: Future shader material time updates for fractals
+        // this.updateShaderUniforms(currentTime);
+    }
+
+    /**
+     * Update shader uniforms for time-based animations (for future use)
+     */
+    updateShaderUniforms(currentTime) {
         for (const obj of Object.values(this.managers.geometry.objects)) {
             if (obj.material && obj.material.uniforms && obj.material.uniforms.time) {
                 obj.material.uniforms.time.value = currentTime * 0.001;
             }
         }
-        */
+    }
 
-        // Animate objects
-        this.managers.geometry.animateObjects();
-
-        // Render the scene
+    /**
+     * Render the current frame
+     */
+    renderScene() {
         this.managers.renderer.render(
             this.managers.scene.getScene(),
             this.managers.camera.getCamera()
@@ -159,13 +272,6 @@ class GalleryApp {
 // Initialize the gallery when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.galleryApp = new GalleryApp();
-
-    // Handle window resize
-    window.addEventListener('resize', () => {
-        if (window.galleryApp) {
-            window.galleryApp.handleResize();
-        }
-    });
 });
 
 // Export for potential module usage

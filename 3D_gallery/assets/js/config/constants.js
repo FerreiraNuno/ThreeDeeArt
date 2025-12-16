@@ -14,7 +14,7 @@ export const GALLERY_CONFIG = {
         FAR: 1000,
         INITIAL_Z: 3,
         INITIAL_Y: 1.6, // Eye level height
-        MOVE_SPEED: 5,
+        MOVE_SPEED: 10,
         // Collision boundary buffer from walls
         BOUNDARY_BUFFER: 0.5,
         // Jump physics
@@ -32,19 +32,19 @@ export const GALLERY_CONFIG = {
         DIRECTIONAL: {
             COLOR: 0xffffff,
             INTENSITY: 0.5,
-            POSITION: { x: 5, y: 8, z: 5 }  
+            POSITION: { x: 5, y: 8, z: 5 }
         },
         POINT: {
             COLOR: 0xffffff,
             INTENSITY: 0.5,
             DISTANCE: 100,
-            POSITION: { x: 0, y: 3, z: 0 }  
+            POSITION: { x: 0, y: 3, z: 0 }
         },
         SPOTLIGHT: {
             COLOR: 0xffffff,
             INTENSITY: 0.5,
             DISTANCE: 100,
-            ANGLE: Math.PI/3,
+            ANGLE: Math.PI / 3,
             POSITION: { x: 0, y: 0, z: 0 },
         }
     },
@@ -69,7 +69,7 @@ export const GALLERY_CONFIG = {
     TEXTURE_REPEAT: {
         FLOOR: { x: 25, y: 25 },
         WALL: { x: 10, y: 2 },
-        CEILING: { x: 1, y: 1}
+        CEILING: { x: 1, y: 1 }
     },
 
     // Materials
