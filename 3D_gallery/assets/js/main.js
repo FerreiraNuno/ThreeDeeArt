@@ -165,37 +165,71 @@ class GalleryApp {
     }
 
     /**
-     * Create the basic gallery structure (floor, walls, ceiling)
+     * Create the basic gallery structure with multiple rooms and corridor
      */
     createGalleryStructure() {
+        // Create test cube in first room
         this.managers.geometry.createTestCube();
-        this.managers.geometry.createFloor();
-        this.managers.geometry.createWalls();
-        this.managers.geometry.createCeiling();
+
+        // Create Room 1 (main gallery room) with doorway to corridor
+        const room1Center = new THREE.Vector3(
+            GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.x,
+            0,
+            GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.z
+        );
+        this.managers.geometry.createRoom(room1Center, 'room1', { front: 'doorway' });
+
+        // Create corridor connecting the rooms
+        const corridorStart = new THREE.Vector3(0, 0, GALLERY_CONFIG.ROOM.DEPTH / 2);
+        const corridorEnd = new THREE.Vector3(0, 0, GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.z - GALLERY_CONFIG.ROOM.DEPTH / 2);
+        this.managers.geometry.createCorridor(corridorStart, corridorEnd, 'mainCorridor');
+
+        // Create Room 2 (empty gallery room) with doorway to corridor
+        const room2Center = new THREE.Vector3(
+            GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.x,
+            0,
+            GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.z
+        );
+        this.managers.geometry.createRoom(room2Center, 'room2', { back: 'doorway' });
     }
 
     /**
      * Create and position artworks in the gallery
      */
     createArtworks() {
-        const paintings = [
+        // Room 1 paintings (main gallery room)
+        const room1Paintings = [
             {
                 image: 'assets/images/vanGogh.jpg',
                 width: 8,
                 height: 4,
-                position: new THREE.Vector3(-12.49, 4, 0),
+                position: new THREE.Vector3(-12.49, 4, GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.z),
                 rotation: new THREE.Vector3(0, Math.PI / 2, 0)
             },
             {
                 image: 'assets/images/vanGogh2.jpg',
                 width: 8,
                 height: 4,
-                position: new THREE.Vector3(12.49, 4, 0),
+                position: new THREE.Vector3(12.49, 4, GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.z),
                 rotation: new THREE.Vector3(0, -Math.PI / 2, 0)
             }
         ];
 
-        paintings.forEach(painting => {
+        // Corridor painting
+        const corridorPaintings = [
+            {
+                image: 'assets/images/reflection.jpg',
+                width: 4,
+                height: 3,
+                position: new THREE.Vector3(-GALLERY_CONFIG.CORRIDOR.WIDTH / 2 + 0.01, 3, GALLERY_CONFIG.LAYOUT.CORRIDOR_CENTER.z),
+                rotation: new THREE.Vector3(0, Math.PI / 2, 0)
+            }
+        ];
+
+        // Room 2 is intentionally left empty
+
+        // Create all paintings
+        [...room1Paintings, ...corridorPaintings].forEach((painting, index) => {
             this.managers.geometry.createPainting(
                 painting.image,
                 painting.width,

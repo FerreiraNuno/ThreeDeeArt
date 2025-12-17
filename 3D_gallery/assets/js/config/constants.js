@@ -7,6 +7,20 @@ export const GALLERY_CONFIG = {
         WALL_HEIGHT: 8
     },
 
+    // Corridor dimensions
+    CORRIDOR: {
+        WIDTH: 6,
+        LENGTH: 10,
+        WALL_HEIGHT: 8
+    },
+
+    // Layout configuration
+    LAYOUT: {
+        ROOM1_CENTER: { x: 0, z: 0 },
+        CORRIDOR_CENTER: { x: 0, z: 30 }, // Room depth/2 + corridor length/2 + small gap
+        ROOM2_CENTER: { x: 0, z: 60 } // Room1 center + room depth + corridor length + room depth/2
+    },
+
     // Camera settings
     CAMERA: {
         FOV: 75,

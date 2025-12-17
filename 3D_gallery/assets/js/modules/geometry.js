@@ -10,6 +10,8 @@ export class GeometryManager {
     constructor(scene) {
         this.scene = scene;
         this.objects = {};
+        this.rooms = {};
+        this.corridors = {};
         this.textureLoader = new THREE.TextureLoader();
         this.personManager = new PersonManager(scene);
     }
@@ -35,32 +37,49 @@ export class GeometryManager {
         return cube;
     }
 
-    createFloor() {
-        const { WIDTH, DEPTH } = GALLERY_CONFIG.ROOM;
+    /**
+     * Create a floor for a specific area
+     * @param {number} width - Floor width
+     * @param {number} depth - Floor depth
+     * @param {THREE.Vector3} position - Floor position
+     * @param {string} name - Identifier for the floor
+     * @returns {THREE.Mesh} The floor mesh
+     */
+    createFloor(width = GALLERY_CONFIG.ROOM.WIDTH, depth = GALLERY_CONFIG.ROOM.DEPTH, position = new THREE.Vector3(0, 0, 0), name = 'floor') {
         const floorTexture = this.textureLoader.load(GALLERY_CONFIG.TEXTURES.FLOOR);
 
         // Configure texture wrapping and repeat
         floorTexture.wrapS = THREE.RepeatWrapping;
         floorTexture.wrapT = THREE.RepeatWrapping;
         const repeat = GALLERY_CONFIG.TEXTURE_REPEAT.FLOOR;
-        floorTexture.repeat.set(repeat.x, repeat.y);
+        floorTexture.repeat.set(repeat.x * (width / GALLERY_CONFIG.ROOM.WIDTH), repeat.y * (depth / GALLERY_CONFIG.ROOM.DEPTH));
 
-        const geometry = new THREE.PlaneGeometry(WIDTH, DEPTH);
+        const geometry = new THREE.PlaneGeometry(width, depth);
         const material = new THREE.MeshLambertMaterial({
             map: floorTexture
         });
 
         const floor = new THREE.Mesh(geometry, material);
         floor.rotation.x = -Math.PI / 2;
+        floor.position.copy(position);
         floor.receiveShadow = true;
 
-        this.objects.floor = floor;
+        this.objects[name] = floor;
         this.scene.add(floor);
         return floor;
     }
 
-    createWalls() {
-        const { WIDTH, DEPTH, WALL_HEIGHT } = GALLERY_CONFIG.ROOM;
+    /**
+     * Create walls for a room
+     * @param {number} width - Room width
+     * @param {number} depth - Room depth
+     * @param {number} height - Wall height
+     * @param {THREE.Vector3} center - Room center position
+     * @param {string} name - Identifier for the walls
+     * @param {Object} openings - Wall openings configuration
+     * @returns {Object} Object containing all wall meshes
+     */
+    createWalls(width = GALLERY_CONFIG.ROOM.WIDTH, depth = GALLERY_CONFIG.ROOM.DEPTH, height = GALLERY_CONFIG.ROOM.WALL_HEIGHT, center = new THREE.Vector3(0, 0, 0), name = 'walls', openings = {}) {
         const wallTexture = this.textureLoader.load(GALLERY_CONFIG.TEXTURES.WALL);
 
         // Configure wall texture
@@ -73,67 +92,102 @@ export class GeometryManager {
             map: wallTexture
         });
 
-        const wallGeometry = new THREE.PlaneGeometry(WIDTH, WALL_HEIGHT);
+        const walls = {};
 
-        // Back wall
-        const backWall = new THREE.Mesh(wallGeometry, wallMaterial);
-        backWall.position.set(0, WALL_HEIGHT / 2, -WIDTH / 2);
-        backWall.receiveShadow = true;
-        this.scene.add(backWall);
+        // Back wall (negative Z)
+        if (!openings.back) {
+            const backWallGeometry = new THREE.PlaneGeometry(width, height);
+            const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
+            backWall.position.set(center.x, center.y + height / 2, center.z - depth / 2);
+            backWall.receiveShadow = true;
+            walls.backWall = backWall;
+            this.scene.add(backWall);
+        } else if (openings.back === 'doorway') {
+            // Create wall with doorway opening
+            const doorwayWalls = this.createWallWithDoorway(width, height, center.x, center.y + height / 2, center.z - depth / 2, 0, wallMaterial, 'back');
+            walls.backWallLeft = doorwayWalls.left;
+            walls.backWallRight = doorwayWalls.right;
+            walls.backWallTop = doorwayWalls.top;
+        }
 
-        // Front wall
-        const frontWall = new THREE.Mesh(wallGeometry, wallMaterial);
-        frontWall.position.set(0, WALL_HEIGHT / 2, WIDTH / 2);
-        frontWall.rotation.y = Math.PI;
-        frontWall.receiveShadow = true;
-        this.scene.add(frontWall);
+        // Front wall (positive Z)
+        if (!openings.front) {
+            const frontWallGeometry = new THREE.PlaneGeometry(width, height);
+            const frontWall = new THREE.Mesh(frontWallGeometry, wallMaterial);
+            frontWall.position.set(center.x, center.y + height / 2, center.z + depth / 2);
+            frontWall.rotation.y = Math.PI;
+            frontWall.receiveShadow = true;
+            walls.frontWall = frontWall;
+            this.scene.add(frontWall);
+        } else if (openings.front === 'doorway') {
+            // Create wall with doorway opening
+            const doorwayWalls = this.createWallWithDoorway(width, height, center.x, center.y + height / 2, center.z + depth / 2, Math.PI, wallMaterial, 'front');
+            walls.frontWallLeft = doorwayWalls.left;
+            walls.frontWallRight = doorwayWalls.right;
+            walls.frontWallTop = doorwayWalls.top;
+        }
 
-        // Left wall
-        const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
-        leftWall.position.set(-WIDTH / 2, WALL_HEIGHT / 2, 0);
-        leftWall.rotation.y = Math.PI / 2;
-        leftWall.receiveShadow = true;
-        this.scene.add(leftWall);
+        // Left wall (negative X)
+        if (!openings.left) {
+            const leftWallGeometry = new THREE.PlaneGeometry(depth, height);
+            const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
+            leftWall.position.set(center.x - width / 2, center.y + height / 2, center.z);
+            leftWall.rotation.y = Math.PI / 2;
+            leftWall.receiveShadow = true;
+            walls.leftWall = leftWall;
+            this.scene.add(leftWall);
+        }
 
-        // Right wall
-        const rightWall = new THREE.Mesh(wallGeometry, wallMaterial);
-        rightWall.position.set(WIDTH / 2, WALL_HEIGHT / 2, 0);
-        rightWall.rotation.y = -Math.PI / 2;
-        rightWall.receiveShadow = true;
-        this.scene.add(rightWall);
+        // Right wall (positive X)
+        if (!openings.right) {
+            const rightWallGeometry = new THREE.PlaneGeometry(depth, height);
+            const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
+            rightWall.position.set(center.x + width / 2, center.y + height / 2, center.z);
+            rightWall.rotation.y = -Math.PI / 2;
+            rightWall.receiveShadow = true;
+            walls.rightWall = rightWall;
+            this.scene.add(rightWall);
+        }
 
-        const walls = { backWall, frontWall, leftWall, rightWall };
-        this.objects.walls = walls;
+        this.objects[name] = walls;
 
-        // brauchen wir das???
+        // Add bounding boxes for collision detection
         for (const wall of Object.values(walls)) {
             wall.BBox = new THREE.Box3().setFromObject(wall);
-            //kann später gelöscht werden !!!!!
+            // Debug helpers (can be removed later)
             const helper = new THREE.Box3Helper(wall.BBox, 0xff0000);
             this.scene.add(helper);
         }
         return walls;
     }
 
-    createCeiling() {
-        const { WIDTH, DEPTH, WALL_HEIGHT } = GALLERY_CONFIG.ROOM;
+    /**
+     * Create a ceiling for a specific area
+     * @param {number} width - Ceiling width
+     * @param {number} depth - Ceiling depth
+     * @param {number} height - Ceiling height
+     * @param {THREE.Vector3} position - Ceiling position
+     * @param {string} name - Identifier for the ceiling
+     * @returns {THREE.Mesh} The ceiling mesh
+     */
+    createCeiling(width = GALLERY_CONFIG.ROOM.WIDTH, depth = GALLERY_CONFIG.ROOM.DEPTH, height = GALLERY_CONFIG.ROOM.WALL_HEIGHT, position = new THREE.Vector3(0, 0, 0), name = 'ceiling') {
         const ceilingTexture = this.textureLoader.load(GALLERY_CONFIG.TEXTURES.CEILING);
 
         ceilingTexture.wrapS = THREE.RepeatWrapping;
         ceilingTexture.wrapT = THREE.RepeatWrapping;
         const repeat = GALLERY_CONFIG.TEXTURE_REPEAT.CEILING;
-        ceilingTexture.repeat.set(repeat.x, repeat.y);
+        ceilingTexture.repeat.set(repeat.x * (width / GALLERY_CONFIG.ROOM.WIDTH), repeat.y * (depth / GALLERY_CONFIG.ROOM.DEPTH));
 
         const material = new THREE.MeshLambertMaterial({
             map: ceilingTexture
         });
-        const geometry = new THREE.PlaneGeometry(WIDTH, DEPTH);
+        const geometry = new THREE.PlaneGeometry(width, depth);
 
         const ceiling = new THREE.Mesh(geometry, material);
         ceiling.rotation.x = Math.PI / 2;
-        ceiling.position.y = WALL_HEIGHT;
+        ceiling.position.set(position.x, position.y + height, position.z);
 
-        this.objects.ceiling = ceiling;
+        this.objects[name] = ceiling;
         this.scene.add(ceiling);
         return ceiling;
     }
@@ -183,6 +237,167 @@ export class GeometryManager {
         return this.personManager;
     }
 
+    /**
+     * Create a complete room with floor, walls, and ceiling
+     * @param {THREE.Vector3} center - Room center position
+     * @param {string} name - Room identifier
+     * @param {Object} openings - Wall openings configuration
+     * @returns {Object} Object containing all room elements
+     */
+    createRoom(center = new THREE.Vector3(0, 0, 0), name = 'room', openings = {}) {
+        const { WIDTH, DEPTH, WALL_HEIGHT } = GALLERY_CONFIG.ROOM;
+
+        const room = {
+            floor: this.createFloor(WIDTH, DEPTH, center, `${name}_floor`),
+            walls: this.createWalls(WIDTH, DEPTH, WALL_HEIGHT, center, `${name}_walls`, openings),
+            ceiling: this.createCeiling(WIDTH, DEPTH, WALL_HEIGHT, center, `${name}_ceiling`)
+        };
+
+        this.rooms[name] = room;
+        return room;
+    }
+
+    /**
+     * Create a corridor connecting two rooms
+     * @param {THREE.Vector3} start - Start position
+     * @param {THREE.Vector3} end - End position
+     * @param {string} name - Corridor identifier
+     * @returns {Object} Object containing all corridor elements
+     */
+    createCorridor(start, end, name = 'corridor') {
+        const { WIDTH, WALL_HEIGHT } = GALLERY_CONFIG.CORRIDOR;
+
+        // Calculate corridor center and length
+        const center = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+        const length = start.distanceTo(end);
+
+        const corridor = {
+            floor: this.createFloor(WIDTH, length, center, `${name}_floor`),
+            walls: this.createCorridorWalls(WIDTH, length, WALL_HEIGHT, center, `${name}_walls`),
+            ceiling: this.createCeiling(WIDTH, length, WALL_HEIGHT, center, `${name}_ceiling`)
+        };
+
+        this.corridors[name] = corridor;
+        return corridor;
+    }
+
+    /**
+     * Create a wall with a doorway opening
+     * @param {number} wallWidth - Total wall width
+     * @param {number} wallHeight - Wall height
+     * @param {number} x - Wall X position
+     * @param {number} y - Wall Y position
+     * @param {number} z - Wall Z position
+     * @param {number} rotationY - Wall rotation around Y axis
+     * @param {THREE.Material} material - Wall material
+     * @param {string} direction - Wall direction (for naming)
+     * @returns {Object} Object containing wall segments
+     */
+    createWallWithDoorway(wallWidth, wallHeight, x, y, z, rotationY, material, direction) {
+        const doorwayWidth = GALLERY_CONFIG.CORRIDOR.WIDTH;
+        const doorwayHeight = 6; // Height of the doorway opening
+        const sideWallWidth = (wallWidth - doorwayWidth) / 2;
+
+        const walls = {};
+
+        // Left wall segment
+        if (sideWallWidth > 0) {
+            const leftGeometry = new THREE.PlaneGeometry(sideWallWidth, wallHeight);
+            const leftWall = new THREE.Mesh(leftGeometry, material);
+            leftWall.position.set(x - doorwayWidth / 2 - sideWallWidth / 2, y, z);
+            leftWall.rotation.y = rotationY;
+            leftWall.receiveShadow = true;
+            walls.left = leftWall;
+            this.scene.add(leftWall);
+        }
+
+        // Right wall segment
+        if (sideWallWidth > 0) {
+            const rightGeometry = new THREE.PlaneGeometry(sideWallWidth, wallHeight);
+            const rightWall = new THREE.Mesh(rightGeometry, material);
+            rightWall.position.set(x + doorwayWidth / 2 + sideWallWidth / 2, y, z);
+            rightWall.rotation.y = rotationY;
+            rightWall.receiveShadow = true;
+            walls.right = rightWall;
+            this.scene.add(rightWall);
+        }
+
+        // Top wall segment (above doorway)
+        const topWallHeight = wallHeight - doorwayHeight;
+        if (topWallHeight > 0) {
+            const topGeometry = new THREE.PlaneGeometry(doorwayWidth, topWallHeight);
+            const topWall = new THREE.Mesh(topGeometry, material);
+            topWall.position.set(x, y + doorwayHeight / 2, z);
+            topWall.rotation.y = rotationY;
+            topWall.receiveShadow = true;
+            walls.top = topWall;
+            this.scene.add(topWall);
+        }
+
+        // Add bounding boxes for collision detection
+        for (const wall of Object.values(walls)) {
+            wall.BBox = new THREE.Box3().setFromObject(wall);
+            // Debug helpers (can be removed later)
+            const helper = new THREE.Box3Helper(wall.BBox, 0xff0000);
+            this.scene.add(helper);
+        }
+
+        return walls;
+    }
+
+    /**
+     * Create walls for a corridor (only left and right walls)
+     * @param {number} width - Corridor width
+     * @param {number} length - Corridor length
+     * @param {number} height - Wall height
+     * @param {THREE.Vector3} center - Corridor center position
+     * @param {string} name - Identifier for the walls
+     * @returns {Object} Object containing corridor wall meshes
+     */
+    createCorridorWalls(width, length, height, center, name) {
+        const wallTexture = this.textureLoader.load(GALLERY_CONFIG.TEXTURES.WALL);
+
+        wallTexture.wrapS = THREE.RepeatWrapping;
+        wallTexture.wrapT = THREE.RepeatWrapping;
+        const repeat = GALLERY_CONFIG.TEXTURE_REPEAT.WALL;
+        wallTexture.repeat.set(repeat.x * (length / GALLERY_CONFIG.ROOM.WIDTH), repeat.y);
+
+        const wallMaterial = new THREE.MeshLambertMaterial({
+            map: wallTexture
+        });
+
+        const walls = {};
+
+        // Left wall (negative X)
+        const leftWallGeometry = new THREE.PlaneGeometry(length, height);
+        const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
+        leftWall.position.set(center.x - width / 2, center.y + height / 2, center.z);
+        leftWall.rotation.y = Math.PI / 2;
+        leftWall.receiveShadow = true;
+        walls.leftWall = leftWall;
+        this.scene.add(leftWall);
+
+        // Right wall (positive X)
+        const rightWallGeometry = new THREE.PlaneGeometry(length, height);
+        const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
+        rightWall.position.set(center.x + width / 2, center.y + height / 2, center.z);
+        rightWall.rotation.y = -Math.PI / 2;
+        rightWall.receiveShadow = true;
+        walls.rightWall = rightWall;
+        this.scene.add(rightWall);
+
+        this.objects[name] = walls;
+
+        // Add bounding boxes for collision detection
+        for (const wall of Object.values(walls)) {
+            wall.BBox = new THREE.Box3().setFromObject(wall);
+            // Debug helpers (can be removed later)
+            const helper = new THREE.Box3Helper(wall.BBox, 0xff0000);
+            this.scene.add(helper);
+        }
+        return walls;
+    }
+
     getObjects() {
         return this.objects;
     }
@@ -193,7 +408,7 @@ export class GeometryManager {
             this.objects.cube.rotation.y += speed;
             this.objects.cube.rotation.z += speed;
         }
-        
+
         // Animate persons with deltaTime for smooth animations
         this.personManager.animatePersons(deltaTime);
     }

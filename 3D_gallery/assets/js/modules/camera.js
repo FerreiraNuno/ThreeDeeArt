@@ -203,28 +203,42 @@ export class CameraManager {
     }
 
     /**
-    * Is called every frame. It checks if the camera has surpassed the boundaries of the room
-    * and places it back to the room before the frame is rendered.
+    * Is called every frame. It checks if the camera has surpassed the boundaries of the gallery
+    * and places it back within bounds before the frame is rendered.
     * This allows the camera to still move at an angle to the walls.
     */
     applyBoundaryConstraints(position) {
-        // Room dimensions
-        const { WIDTH, DEPTH, WALL_HEIGHT } = GALLERY_CONFIG.ROOM;
-        // Distance from walls where collision detection starts
+        const { WIDTH, DEPTH } = GALLERY_CONFIG.ROOM;
+        const { WIDTH: CORRIDOR_WIDTH } = GALLERY_CONFIG.CORRIDOR;
         const buffer = GALLERY_CONFIG.CAMERA.BOUNDARY_BUFFER;
 
-        const bounds = {
+        // Define bounds for the entire gallery space
+        const room1Z = GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.z;
+        const room2Z = GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.z;
+        
+        // Overall gallery bounds
+        const overallBounds = {
             MIN_X: -WIDTH / 2 + buffer,
             MAX_X: WIDTH / 2 - buffer,
-            MIN_Z: -DEPTH / 2 + buffer,
-            MAX_Z: DEPTH / 2 - buffer,
+            MIN_Z: room1Z - DEPTH / 2 + buffer,
+            MAX_Z: room2Z + DEPTH / 2 - buffer
         };
 
-        // Constrain X position (left/right walls)
-        position.x = Math.max(bounds.MIN_X, Math.min(bounds.MAX_X, position.x));
+        // Check if player is in corridor area
+        const corridorStartZ = room1Z + DEPTH / 2;
+        const corridorEndZ = room2Z - DEPTH / 2;
+        const inCorridor = position.z >= corridorStartZ && position.z <= corridorEndZ;
 
-        // Constrain Z position (front/back walls)
-        position.z = Math.max(bounds.MIN_Z, Math.min(bounds.MAX_Z, position.z));
+        if (inCorridor) {
+            // In corridor - constrain to corridor width
+            position.x = Math.max(-CORRIDOR_WIDTH / 2 + buffer, Math.min(CORRIDOR_WIDTH / 2 - buffer, position.x));
+        } else {
+            // In rooms - constrain to room width
+            position.x = Math.max(overallBounds.MIN_X, Math.min(overallBounds.MAX_X, position.x));
+        }
+
+        // Always constrain Z to overall gallery bounds
+        position.z = Math.max(overallBounds.MIN_Z, Math.min(overallBounds.MAX_Z, position.z));
     }
 
     checkCollisionWithObject() {
