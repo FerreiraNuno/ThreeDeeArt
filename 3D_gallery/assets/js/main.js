@@ -3,6 +3,7 @@ import { CameraManager } from './modules/camera.js';
 import { LightingManager } from './modules/lighting.js';
 import { GeometryManager } from './modules/geometry.js';
 import { MultiplayerManager } from './modules/multiplayer.js';
+import { PortalManager } from './modules/portal.js';
 import { GALLERY_CONFIG } from './config/constants.js';
 import { EffectComposer } from 'EffectComposer';
 import { RenderPass } from 'RenderPass';
@@ -130,7 +131,7 @@ class GalleryApp {
         // Post-init: beide Manager kennen sich -> keine zyklische Abhängigkeit!!!
         this.managers.geometry.setLightingManager(this.managers.lighting);
         this.managers.lighting.setGeometryManager(this.managers.geometry);
-        
+
         this.managers.camera.getCamera().add(this.listener);
         this.managers.audio = new AudioManager(this.listener);
 
@@ -141,6 +142,12 @@ class GalleryApp {
             this.managers.scene.getScene(),
             this.managers.geometry.getPersonManager(),
             this.managers.camera
+        );
+
+        // Initialize portal manager for "Not to Be Reproduced" effect
+        this.managers.portal = new PortalManager(
+            this.managers.scene.getScene(),
+            this.managers.renderer.getRenderer()
         );
 
         // Create local player body for first-person view
@@ -199,7 +206,7 @@ class GalleryApp {
         this.createAudio();
     }
 
-    
+
     setupIntersect() {
         this.intersect = new Intersect();
 
@@ -209,10 +216,10 @@ class GalleryApp {
 
     //Objekte hinzufügen -> vllt in intersect
     addIntersectObjects(objects) {
-        if (this.intersect) 
+        if (this.intersect)
             this.intersect.setObjects(objects);
     }
-    
+
 
 
 
@@ -249,24 +256,24 @@ class GalleryApp {
         //Fraktale erzeugen
         this.dragon = this.managers.geometry.createDragonFractal(
             'room2',
-            'rightWall', 
-            GALLERY_CONFIG.ROOM.WALL_HEIGHT, 
+            'rightWall',
+            GALLERY_CONFIG.ROOM.WALL_HEIGHT,
             { color: 0xff0000, maxOrder: 12 },
             7, 5, 1
-           
+
         );
         this.dragon2 = this.managers.geometry.createDragonFractal(
             'room2',
-            'leftWall', 
-            GALLERY_CONFIG.ROOM.WALL_HEIGHT, 
+            'leftWall',
+            GALLERY_CONFIG.ROOM.WALL_HEIGHT,
             { color: 0x0000FF, maxOrder: 11 },
             6, 2, 1
-        ); 
+        );
     }
 
     updateFractal(deltaTime) {
         if (!this.dragon || !this.dragon2) return;
-            
+
         //Zeit aufsummieren
         this.fractalTimer += deltaTime;
 
@@ -274,7 +281,7 @@ class GalleryApp {
         if (this.fractalTimer < this.fractalInterval) return;
 
         this.fractalTimer = 0;
-        
+
         // Abbruch, wenn maxOrder erreicht
         if (this.dragon.fractal.getOrder() >= this.dragon.maxOrder) {
             this.dragon.reset();
@@ -338,7 +345,7 @@ class GalleryApp {
                 image: 'assets/images/reflection.jpg',
                 width: 4,
                 height: 3,
-                position: new THREE.Vector3(-GALLERY_CONFIG.CORRIDOR.WIDTH / 2 + 0.01, 3, GALLERY_CONFIG.LAYOUT.CORRIDOR_CENTER.z-12.5),
+                position: new THREE.Vector3(-GALLERY_CONFIG.CORRIDOR.WIDTH / 2 + 0.01, 3, GALLERY_CONFIG.LAYOUT.CORRIDOR_CENTER.z - 12.5),
                 rotation: new THREE.Vector3(0, Math.PI / 2, 0)
             }
         ];
@@ -361,20 +368,20 @@ class GalleryApp {
         //Teppich erzeugen
         this.carpet = this.managers.geometry.createCarpet(
             new THREE.Vector3(0, 8, 0),
-            16, 
-            3, 
+            16,
+            3,
 
         );
         this.carpet2 = this.managers.geometry.createCarpet(
             new THREE.Vector3(-7.5, -1, 0),
-            12, 
-            3, 
+            12,
+            3,
         );
         this.carpet2.rotation.z = -Math.PI / 2;
         this.carpet3 = this.managers.geometry.createCarpet(
             new THREE.Vector3(7.5, -1, 0),
-            12, 
-            3, 
+            12,
+            3,
         );
         this.carpet3.rotation.z = Math.PI / 2;
     }
@@ -432,34 +439,34 @@ class GalleryApp {
 
         // Textur asynchron laden
         const musicboxTex = await new Promise((resolve, reject) => {
-                textureLoader.load(
-                    'assets/images/box.jpg',
-                    (texture) => resolve(texture),
-                    undefined,
-                    (err) => reject(err)
-                );
-            });
-
-            const boxMaterial = new THREE.MeshLambertMaterial({
-                map: musicboxTex,
-            });
-
-            const musicboxGeo = new THREE.BoxGeometry(1, 1, 0.5);
-            const musicbox = new THREE.Mesh(musicboxGeo, boxMaterial);
-
-            // Position & Rotation setzen **auf dem Mesh**
-            musicbox.position.set(1.35, 0.8, 0);
-            musicbox.rotation.y = Math.PI / 2; // optional 90° drehen
-
-            this.dragon2.add(musicbox);
-
-            this.managers.audio.addPositionalAudio(
-                musicbox,
-                'assets/audio/background.mp3',
-                true,   // loop
-                0.3,    // volume
-                10      // refDistance
+            textureLoader.load(
+                'assets/images/box.jpg',
+                (texture) => resolve(texture),
+                undefined,
+                (err) => reject(err)
             );
+        });
+
+        const boxMaterial = new THREE.MeshLambertMaterial({
+            map: musicboxTex,
+        });
+
+        const musicboxGeo = new THREE.BoxGeometry(1, 1, 0.5);
+        const musicbox = new THREE.Mesh(musicboxGeo, boxMaterial);
+
+        // Position & Rotation setzen **auf dem Mesh**
+        musicbox.position.set(1.35, 0.8, 0);
+        musicbox.rotation.y = Math.PI / 2; // optional 90° drehen
+
+        this.dragon2.add(musicbox);
+
+        this.managers.audio.addPositionalAudio(
+            musicbox,
+            'assets/audio/background.mp3',
+            true,   // loop
+            0.3,    // volume
+            10      // refDistance
+        );
     }
 
 
@@ -505,8 +512,8 @@ class GalleryApp {
         this.lastTime = currentTime;
         return deltaTime;
     }
-    
-    
+
+
     /**
      * Update all scene elements
      */
@@ -567,16 +574,16 @@ class GalleryApp {
     */
 
     handleResize() {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
 
-    this.managers.camera.updateAspectRatio();
-    this.managers.renderer.handleResize();
+        this.managers.camera.updateAspectRatio();
+        this.managers.renderer.handleResize();
 
-    if (this.composer) {
-        this.composer.setSize(width, height);
+        if (this.composer) {
+            this.composer.setSize(width, height);
+        }
     }
-}
 
 
     /**
@@ -679,7 +686,7 @@ class GalleryApp {
         return bodyGroup;
     }
 
-    
+
 
     /**
      * Update local player body to follow camera movement and animate walking
@@ -776,7 +783,7 @@ class GalleryApp {
                     0.2
                 );
             }
-        }   
+        }
     }
     /**
      * Get access to managers for debugging or extensions
@@ -784,7 +791,7 @@ class GalleryApp {
     getManagers() {
         return this.managers;
     }
-    
+
 }
 
 
