@@ -121,7 +121,7 @@ export class MultiplayerManager {
     addRemotePlayer(playerData) {
         if (this.remotePlayers.has(playerData.id)) return;
 
-        const footOffset = -0.23; // Calculated from person geometry: hip(0.9) + foot(-0.67) = 0.23
+ // Calculated from person geometry: hip(0.9) + foot(-0.67) = 0.23
         const initialY = playerData.position.y > 1.6 ?
             (playerData.position.y - 1.6 + footOffset) : footOffset;
 
