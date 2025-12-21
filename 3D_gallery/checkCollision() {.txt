@@ -1,0 +1,30 @@
+checkCollision() {
+        const playerBB = new THREE.Box3();
+        const cameraWorldPos = new THREE.Vector3();
+
+        this.controls.getObject().getWorldPosition(cameraWorldPos);    //camera repräsentiert player's position -> camera position in vector
+        playerBB.setFromCenterAndSize(  //BB wird gesetzt quasi um Player(=camera)
+            cameraWorldPos,
+            new THREE.Vector3(1, 1, 1)
+        );
+
+        // Cube aus GeometryManager holen
+        const cube = this.geometryManager.getObjects().cube;
+        
+        if (playerBB.intersectsBox(cube.BBox)) {
+            console.log('Kollision!');
+            return true;
+        }
+
+        return false;
+
+        /*
+        const walls = this.geometryManager.getObjects().walls;
+        for (const wall of Object.values(walls)){
+            if(playerBB.intersectsBox(wall.BBox)){
+                return true;
+            }
+        }
+        return false;
+        */
+    }

@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { GALLERY_CONFIG } from '../config/constants.js';
 import { vertexShader, fragmentShader} from './shader.js';
+import DragonFractal from './fractal.js';
+import DragonFractalGeometry from './fractalGeometry.js';
 
 /**
  * Geometry and objects management module
@@ -150,6 +152,7 @@ export class GeometryManager {
         this.objects[imageURL] = painting;
         return painting;
     }
+
 
     getObjects() {
         return this.objects;
