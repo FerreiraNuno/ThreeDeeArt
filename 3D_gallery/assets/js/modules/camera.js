@@ -25,7 +25,15 @@ export class CameraManager {
             forward: false,
             backward: false,
             left: false,
-            right: false
+            right: false,
+            jump: false
+        };
+
+        // Jump physics state
+        this.jumpState = {
+            isJumping: false,
+            verticalVelocity: 0,
+            isOnGround: true
         };
 
         this.setupControls();
@@ -80,6 +88,9 @@ export class CameraManager {
             case KEY_MAPPINGS.RIGHT:
                 this.keys.right = true;
                 break;
+            case KEY_MAPPINGS.JUMP:
+                this.keys.jump = true;
+                break;
         }
     }
 
@@ -97,12 +108,48 @@ export class CameraManager {
             case KEY_MAPPINGS.RIGHT:
                 this.keys.right = false;
                 break;
+            case KEY_MAPPINGS.JUMP:
+                this.keys.jump = false;
+                break;
         }
     }
 
-    updateMovement(deltaTime = 1 / 60) {
+    updateJumpPhysics(deltaTime) {
+        const currentPosition = this.controls.getObject().position;
+        const groundLevel = GALLERY_CONFIG.CAMERA.GROUND_LEVEL;
+
+        // Check if player is on ground
+        this.jumpState.isOnGround = currentPosition.y <= groundLevel;
+
+        // Handle jump input
+        if (this.keys.jump && this.jumpState.isOnGround && !this.jumpState.isJumping) {
+            this.jumpState.isJumping = true;
+            this.jumpState.verticalVelocity = GALLERY_CONFIG.CAMERA.JUMP_VELOCITY;
+            this.jumpState.isOnGround = false;
+        }
+
+        // Apply gravity and update vertical position
+        if (this.jumpState.isJumping || !this.jumpState.isOnGround) {
+            this.jumpState.verticalVelocity += GALLERY_CONFIG.CAMERA.GRAVITY * deltaTime;
+            currentPosition.y += this.jumpState.verticalVelocity * deltaTime;
+
+            // Check if landed
+            if (currentPosition.y <= groundLevel) {
+                currentPosition.y = groundLevel;
+                this.jumpState.verticalVelocity = 0;
+                this.jumpState.isJumping = false;
+                this.jumpState.isOnGround = true;
+            }
+        }
+    }
+
+    updateMovement(deltaTime) {
+        // Update jump physics first
+        this.updateJumpPhysics(deltaTime);
+
+        // Handle horizontal movement
         if (!this.keys.forward && !this.keys.backward && !this.keys.left && !this.keys.right) {
-            return; // No movement needed
+            return; // No horizontal movement needed
         }
 
         const moveSpeed = GALLERY_CONFIG.CAMERA.MOVE_SPEED * deltaTime;
@@ -116,30 +163,31 @@ export class CameraManager {
         velocity.normalize();
         velocity.multiplyScalar(moveSpeed);
 
-        // Apply movement relative to camera direction
+        // get direction where the camera is pointing
         const direction = new THREE.Vector3();
         this.camera.getWorldDirection(direction);
         direction.y = 0; // Keep movement horizontal
         direction.normalize();
-
         const right = new THREE.Vector3();
         right.crossVectors(direction, this.camera.up);
 
         const movement = new THREE.Vector3();
         movement.addScaledVector(direction, -velocity.z);
         movement.addScaledVector(right, velocity.x);
-        
-        
+
         const previousPosition = this.controls.getObject().position.clone(); //vorherige Position merken
         const newPosition = previousPosition.clone().add(movement);
+
+        // Preserve the Y position from jump physics
+        newPosition.y = previousPosition.y;
 
         // Temporäre Kamera-BoundingBox für die geplante Position
         const tempPlayerBB = new THREE.Box3().setFromCenterAndSize(
             newPosition,
-            new THREE.Vector3(1,1,1)  // gleiche Größe wie in checkCollision()
+            new THREE.Vector3(1, 1, 1)
         );
 
-        // Kollision checken
+        // Kollision mit Objekt checken
         let collided = false;
         const cube = this.geometryManager.getObjects().cube;
         if (tempPlayerBB.intersectsBox(cube.BBox)) {
@@ -151,72 +199,55 @@ export class CameraManager {
         if (!collided) {
             this.controls.getObject().position.copy(newPosition);
             this.applyBoundaryConstraints(this.controls.getObject().position);
-        }   
-    }
-    
-    checkCollision() {
-        const playerBB = new THREE.Box3();
-        const cameraWorldPos = new THREE.Vector3();
-
-        this.controls.getObject().getWorldPosition(cameraWorldPos);    //camera repräsentiert player's position -> camera position in vector
-        playerBB.setFromCenterAndSize(  //BB wird gesetzt quasi um Player(=camera)
-            cameraWorldPos,
-            new THREE.Vector3(1, 1, 1)
-        );
-
-        // Cube aus GeometryManager holen
-        const cube = this.geometryManager.getObjects().cube;
-        
-        if (playerBB.intersectsBox(cube.BBox)) {
-            console.log('Kollision!');
-            return true;
         }
-
-        return false;
-
-        /*
-        const walls = this.geometryManager.getObjects().walls;
-        for (const wall of Object.values(walls)){
-            if(playerBB.intersectsBox(wall.BBox)){
-                return true;
-            }
-        }
-        return false;
-        */
     }
 
-
-    
-    
-    /** -------- SPÄTER DURCH KOLLISIONSABFRAGE ERSETZEN?! -------
-     * 
-     * Apply boundary constraints to keep camera within room bounds
-     * @param {THREE.Vector3} position - The position to constrain
-     */
+    /**
+    * Is called every frame. It checks if the camera has surpassed the boundaries of the gallery
+    * and places it back within bounds before the frame is rendered.
+    * This allows the camera to still move at an angle to the walls.
+    */
     applyBoundaryConstraints(position) {
-        const { WIDTH, DEPTH, WALL_HEIGHT } = GALLERY_CONFIG.ROOM;
+        const { WIDTH, DEPTH } = GALLERY_CONFIG.ROOM;
+        const { WIDTH: CORRIDOR_WIDTH } = GALLERY_CONFIG.CORRIDOR;
         const buffer = GALLERY_CONFIG.CAMERA.BOUNDARY_BUFFER;
 
-        // Calculate dynamic boundaries based on room dimensions
-        const bounds = {
+        // Define bounds for the entire gallery space
+        const room1Z = GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.z;
+        const room2Z = GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.z;
+        
+        // Overall gallery bounds
+        const overallBounds = {
             MIN_X: -WIDTH / 2 + buffer,
             MAX_X: WIDTH / 2 - buffer,
-            MIN_Z: -DEPTH / 2 + buffer,
-            MAX_Z: DEPTH / 2 - buffer,
-            MIN_Y: 0,  // Floor is at -1, so camera should stay above 0
-            MAX_Y: WALL_HEIGHT - 2  // Ceiling height minus buffer
+            MIN_Z: room1Z - DEPTH / 2 + buffer,
+            MAX_Z: room2Z + DEPTH / 2 - buffer
         };
 
-        // Constrain X position (left/right walls)
-        position.x = Math.max(bounds.MIN_X, Math.min(bounds.MAX_X, position.x));
+        // Check if player is in corridor area
+        const corridorStartZ = room1Z + DEPTH / 2;
+        const corridorEndZ = room2Z - DEPTH / 2;
+        const inCorridor = position.z >= corridorStartZ && position.z <= corridorEndZ;
 
-        // Constrain Z position (front/back walls)
-        position.z = Math.max(bounds.MIN_Z, Math.min(bounds.MAX_Z, position.z));
+        if (inCorridor) {
+            // In corridor - constrain to corridor width
+            position.x = Math.max(-CORRIDOR_WIDTH / 2 + buffer, Math.min(CORRIDOR_WIDTH / 2 - buffer, position.x));
+        } else {
+            // In rooms - constrain to room width
+            position.x = Math.max(overallBounds.MIN_X, Math.min(overallBounds.MAX_X, position.x));
+        }
 
-        // Constrain Y position (floor/ceiling)
-        position.y = Math.max(bounds.MIN_Y, Math.min(bounds.MAX_Y, position.y));
+        // Always constrain Z to overall gallery bounds
+        position.z = Math.max(overallBounds.MIN_Z, Math.min(overallBounds.MAX_Z, position.z));
     }
-    
+
+    checkCollisionWithObject() {
+        const object = this.geometryManager.getObjects().object;
+        if (object.BBox.intersects(this.camera.BBox)) {
+            return true;
+        }
+        return false;
+    }
 
     update(deltaTime) {
         // Update smooth keyboard movement
@@ -240,5 +271,37 @@ export class CameraManager {
         const direction = new THREE.Vector3();
         this.camera.getWorldDirection(direction);
         return direction;
+    }
+
+    /**
+     * Get the current camera position
+     * @returns {THREE.Vector3} Current camera position
+     */
+    getPosition() {
+        return this.controls.getObject().position.clone();
+    }
+
+    /**
+     * Get the current camera rotation
+     * @returns {THREE.Euler} Current camera rotation
+     */
+    getRotation() {
+        return this.controls.getObject().rotation.clone();
+    }
+
+    /**
+     * Set the camera position (for multiplayer synchronization if needed)
+     * @param {THREE.Vector3} position - New position
+     */
+    setPosition(position) {
+        this.controls.getObject().position.copy(position);
+    }
+
+    /**
+     * Set the camera rotation (for multiplayer synchronization if needed)
+     * @param {THREE.Euler} rotation - New rotation
+     */
+    setRotation(rotation) {
+        this.controls.getObject().rotation.copy(rotation);
     }
 }

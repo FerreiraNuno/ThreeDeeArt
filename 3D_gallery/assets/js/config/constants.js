@@ -7,6 +7,20 @@ export const GALLERY_CONFIG = {
         WALL_HEIGHT: 8
     },
 
+    // Corridor dimensions
+    CORRIDOR: {
+        WIDTH: 6,
+        LENGTH: 10,
+        WALL_HEIGHT: 8
+    },
+
+    // Layout configuration
+    LAYOUT: {
+        ROOM1_CENTER: { x: 0, z: 0 },
+        CORRIDOR_CENTER: { x: 0, z: 30 }, // Room depth/2 + corridor length/2 + small gap
+        ROOM2_CENTER: { x: 0, z: 60 } // Room1 center + room depth + corridor length + room depth/2
+    },
+
     // Camera settings
     CAMERA: {
         FOV: 75,
@@ -14,9 +28,13 @@ export const GALLERY_CONFIG = {
         FAR: 1000,
         INITIAL_Z: 3,
         INITIAL_Y: 1.6, // Eye level height
-        MOVE_SPEED: 5,
+        MOVE_SPEED: 10,
         // Collision boundary buffer from walls
-        BOUNDARY_BUFFER: 0.5
+        BOUNDARY_BUFFER: 0.5,
+        // Jump physics
+        JUMP_VELOCITY: 8,
+        GRAVITY: -25,
+        GROUND_LEVEL: 1.6
     },
 
     // Lighting
@@ -28,19 +46,19 @@ export const GALLERY_CONFIG = {
         DIRECTIONAL: {
             COLOR: 0xffffff,
             INTENSITY: 0.5,
-            POSITION: { x: 5, y: 8, z: 5 }  
+            POSITION: { x: 5, y: 8, z: 5 }
         },
         POINT: {
             COLOR: 0xffffff,
             INTENSITY: 0.5,
             DISTANCE: 100,
-            POSITION: { x: 0, y: 3, z: 0 }  
+            POSITION: { x: 0, y: 3, z: 0 }
         },
         SPOTLIGHT: {
             COLOR: 0xffffff,
             INTENSITY: 0.5,
             DISTANCE: 100,
-            ANGLE: Math.PI/3,
+            ANGLE: Math.PI / 3,
             POSITION: { x: 0, y: 0, z: 0 },
         }
     },
@@ -65,7 +83,7 @@ export const GALLERY_CONFIG = {
     TEXTURE_REPEAT: {
         FLOOR: { x: 25, y: 25 },
         WALL: { x: 10, y: 2 },
-        CEILING: { x: 1, y: 1}
+        CEILING: { x: 1, y: 1 }
     },
 
     // Materials
@@ -106,5 +124,6 @@ export const KEY_MAPPINGS = {
     FORWARD: 'KeyW',
     BACKWARD: 'KeyS',
     LEFT: 'KeyA',
-    RIGHT: 'KeyD'
+    RIGHT: 'KeyD',
+    JUMP: 'Space'
 };
