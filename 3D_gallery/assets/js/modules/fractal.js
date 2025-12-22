@@ -10,8 +10,8 @@ export default class DragonFractal {
     //Fraktal zurücksetzen -> Startlinie (Ordnung 0)
     reset() {
         this.points = [
-            {x: -0.1, y:0},
-            {x: 0.1, y:0}
+            {x: -0.5, y:0},
+            {x: 0.5, y:0}
         ];
         
         this.order = 0; //Iteration auf 0 setzen

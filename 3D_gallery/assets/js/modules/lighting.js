@@ -15,7 +15,7 @@ export class LightingManager {
         // ambient light
         this.lights.ambient = new THREE.AmbientLight(
             GALLERY_CONFIG.LIGHTING.AMBIENT.COLOR,
-            0.3
+            0.1
         );
         this.scene.add(this.lights.ambient);
         
@@ -65,14 +65,14 @@ export class LightingManager {
         // Directional light
         this.lights.directional = new THREE.DirectionalLight(
             GALLERY_CONFIG.LIGHTING.DIRECTIONAL.COLOR,
-            GALLERY_CONFIG.LIGHTING.DIRECTIONAL.INTENSITY,
+            0.1,
         );
 
         const directPos = GALLERY_CONFIG.LIGHTING.DIRECTIONAL.POSITION;
         this.lights.directional.position.set(directPos.x, directPos.y, directPos.z);
         this.lights.directional.castShadow = true;
 
-        const ceilingDirectional = new THREE.DirectionalLight(0xffffff, 0.1);
+        const ceilingDirectional = new THREE.DirectionalLight(0xffffff, 0.2);
         ceilingDirectional.position.set(0, 0, 0);   // Raummitte
         ceilingDirectional.target.position.set(0, GALLERY_CONFIG.ROOM.WALL_HEIGHT, 0);
         this.scene.add(ceilingDirectional);
@@ -129,7 +129,7 @@ export class LightingManager {
         // Add additional directional light from opposite direction to eliminate dark walls
         this.lights.directional2 = new THREE.DirectionalLight(
             0xffffff,
-            0.4
+            0.1
         );
         this.lights.directional2.position.set(-directPos.x, directPos.y, -directPos.z);
         this.scene.add(this.lights.directional2);

@@ -1,3 +1,4 @@
+//für Farbanimation
 export const vertexShader = `
     varying vec3 vPosition;
     void main() {

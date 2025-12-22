@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { GALLERY_CONFIG } from '../config/constants.js';
-import DragonFractal from './fractal.js';
-import DragonFractalGeometry from './fractalGeometry.js';
 import { vertexShader, fragmentShader } from './shader.js';
 import { PersonManager } from './person.js';
+import DragonFractal from './fractal.js';
+import DragonFractalGeometry from './fractalGeometry.js';
+import { createGlowMaterial } from './glowMaterial.js';
+//import GUI from 'https://cdn.jsdelivr.net/npm/lil-gui@0.18.0/dist/lil-gui.esm.min.js';
 
 /**
  * Geometry and objects management module
@@ -16,27 +18,7 @@ export class GeometryManager {
         this.corridors = {};
         this.textureLoader = new THREE.TextureLoader();
         this.personManager = new PersonManager(scene);
-    }
-
-    //hier auch BBox
-    createTestCube() {
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshLambertMaterial({
-            color: GALLERY_CONFIG.MATERIALS.CUBE.COLOR
-        });
-        const cube = new THREE.Mesh(geometry, material);
-        cube.position.set(-10, 1, -10); // Center of room, sitting properly on floor
-        cube.castShadow = true;
-        cube.receiveShadow = true;
-
-        cube.BBox = new THREE.Box3().setFromObject(cube);
-        //kann später gelöscht werden
-        const bboxHelper = new THREE.Box3Helper(cube.BBox, 0x0000ff);
-        this.scene.add(bboxHelper);
-
-        this.objects.cube = cube;
-        this.scene.add(cube);
-        return cube;
+        //this.initGUI();
     }
 
     /**
@@ -194,6 +176,25 @@ export class GeometryManager {
         return ceiling;
     }
 
+    //hier auch BBox
+    createTestCube() {
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = createGlowMaterial(0xff00ff, 1.5);     //Glow-Effekt noch komisch
+        const cube = new THREE.Mesh(geometry, material);
+        cube.position.set(0, 5, 2); // Center of room, sitting properly on floor
+        cube.castShadow = true;
+        cube.receiveShadow = true;
+
+        cube.BBox = new THREE.Box3().setFromObject(cube);
+        //kann später gelöscht werden
+        //const bboxHelper = new THREE.Box3Helper(cube.BBox, 0x0000ff);
+        //this.scene.add(bboxHelper);
+
+        this.objects.cube = cube;
+        this.scene.add(cube);
+        return cube;
+    }
+
     createPainting(imageURL, width, height, position, rotation) {
         const textureLoader = new THREE.TextureLoader();
         const paintingTexture = textureLoader.load(imageURL);
@@ -209,8 +210,6 @@ export class GeometryManager {
         return painting;
     }
 
-<<<<<<< HEAD
-=======
     /**
      * Create a player prop using the PersonManager
      * @param {THREE.Vector3} position - Position to place the player
@@ -401,7 +400,60 @@ export class GeometryManager {
         }
         return walls;
     }
->>>>>>> master
+
+    
+    createDragonFractal(wallName ,wallHeight = GALLERY_CONFIG.ROOM.WALL_HEIGHT, options = {}) {
+        //Wand aus der Objekt-Liste holen
+        const roomWalls = this.objects['room1_walls'];
+        const wall = roomWalls[wallName];
+                
+        // Fraktal erzeugen
+        const dragon = new DragonFractalGeometry(options);
+   
+        // Standard-Skalierung
+        const scaleX = 5;
+        const scaleY = 5;
+        const scaleZ = 1;
+        dragon.scale.set(scaleX, scaleY, scaleZ);
+
+        // Position in Wand-Lokalsystem
+        const offset = 0.01;
+        const wallNormal = new THREE.Vector3(0,0,1);
+        dragon.position.copy(wallNormal.multiplyScalar(offset));    //entlang der Normalen verschieben
+
+        // Fraktal als Child an die Wand hängen
+        wall.add(dragon);
+
+        // Objekt speichern
+        this.objects[`dragon_${wallName}`] = dragon;
+        
+        return dragon;
+    }
+
+    /*
+    initGUI() {
+        const gui = new GUI();
+        const params = {
+            scaleX: 5,
+            scaleY: 5,
+            scaleZ: 1
+        };
+
+        gui.add(params, 'scaleX', 1, 10).onChange((value) => {
+            const dragon = this.objects['dragon_wall1'];
+            if (dragon) dragon.scale.x = value;
+        });
+        gui.add(params, 'scaleY', 1, 10).onChange((value) => {
+            const dragon = this.objects['dragon_wall1'];
+            if (dragon) dragon.scale.y = value;
+        });
+        gui.add(params, 'scaleZ', 1, 5).onChange((value) => {
+            const dragon = this.objects['dragon_wall1'];
+            if (dragon) dragon.scale.z = value;
+        });
+    }
+    */
+
 
     getObjects() {
         return this.objects;

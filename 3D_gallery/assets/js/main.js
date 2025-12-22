@@ -4,6 +4,10 @@ import { LightingManager } from './modules/lighting.js';
 import { GeometryManager } from './modules/geometry.js';
 import { MultiplayerManager } from './modules/multiplayer.js';
 import { GALLERY_CONFIG } from './config/constants.js';
+import { EffectComposer } from 'EffectComposer';
+import { RenderPass } from 'RenderPass';
+import { UnrealBloomPass } from 'UnrealBloomPass';
+
 
 /**
  * Renderer management class
@@ -78,6 +82,9 @@ class GalleryApp {
         this.managers = {};
         this.isRunning = false;
         this.lastTime = 0;
+        this.fractalTimer = 0;
+        this.fractalInterval = 2.5; // Sekunden pro Iteration
+        this.dragon = null;
         this.init();
     }
 
@@ -89,6 +96,7 @@ class GalleryApp {
             this.initializeManagers();
             this.setupManagerConnections();
             this.setupScene();
+            this.setupPostProcessing();
             this.setupEventListeners();
             this.start();
 
@@ -165,27 +173,87 @@ class GalleryApp {
     setupScene() {
         this.createGalleryStructure();
         this.createArtworks();
+        this.createFractal();
+    }
+
+    setupPostProcessing() {
+        const renderer = this.managers.renderer.getRenderer();
+        const scene = this.managers.scene.getScene();
+        const camera = this.managers.camera.getCamera();
+
+        // Composer
+        this.composer = new EffectComposer(renderer);
+
+        // RenderPass – rendert die Szene normal
+        const renderPass = new RenderPass(scene, camera);
+        this.composer.addPass(renderPass);
+
+        // UnrealBloomPass – Bloom-Effekt
+        const bloomParams = {
+            strength: 1.5,  // Stärke des Glows
+            radius: 0.4,    // Weichheit des Glows
+            threshold: 0.85 // ab welcher Helligkeit Glow startet
+        };
+
+        const bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            bloomParams.strength,
+            bloomParams.radius,
+            bloomParams.threshold
+        );
+
+        this.composer.addPass(bloomPass);
+    }
+
+    createFractal() {
+        //Fraktal erzeugen
+        this.dragon = this.managers.geometry.createDragonFractal(
+            'backWall', 
+            GALLERY_CONFIG.ROOM.WALL_HEIGHT, 
+            { color: 0xff0000, maxOrder: 12 }
+        );
+
+        console.log(this.managers.scene.getScene());
+
+    }
+
+    updateFractal(deltaTime) {
+        if (!this.dragon) return;
+            
+        //Zeit aufsummieren
+        this.fractalTimer += deltaTime;
+
+        // Nur iterieren, wenn genug Zeit vergangen ist
+        if (this.fractalTimer < this.fractalInterval) return;
+
+        this.fractalTimer = 0;
+        
+        // Abbruch, wenn maxOrder erreicht
+        if (this.dragon.fractal.getOrder() >= this.dragon.maxOrder) {
+            this.dragon.reset();
+            this.fractalTimer = -1; //1s Pause
+            return;
+        }
+
+        this.dragon.iterate();
     }
 
     /**
      * Create the basic gallery structure with multiple rooms and corridor
      */
     createGalleryStructure() {
-        // Create test cube in first room
-        this.managers.geometry.createTestCube();
-
         // Create Room 1 (main gallery room) with doorway to corridor
         const room1Center = new THREE.Vector3(
             GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.x,
             0,
             GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.z
         );
-        this.managers.geometry.createRoom(room1Center, 'room1', { front: 'doorway' });
+        this.room1 = this.managers.geometry.createRoom(room1Center, 'room1', { front: 'doorway' });
 
         // Create corridor connecting the rooms
         const corridorStart = new THREE.Vector3(0, 0, GALLERY_CONFIG.ROOM.DEPTH / 2);
         const corridorEnd = new THREE.Vector3(0, 0, GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.z - GALLERY_CONFIG.ROOM.DEPTH / 2);
-        this.managers.geometry.createCorridor(corridorStart, corridorEnd, 'mainCorridor');
+        this.mainCorridor = this.managers.geometry.createCorridor(corridorStart, corridorEnd, 'mainCorridor');
 
         // Create Room 2 (empty gallery room) with doorway to corridor
         const room2Center = new THREE.Vector3(
@@ -193,7 +261,10 @@ class GalleryApp {
             0,
             GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.z
         );
-        this.managers.geometry.createRoom(room2Center, 'room2', { back: 'doorway' });
+        this.room2 = this.managers.geometry.createRoom(room2Center, 'room2', { back: 'doorway' });
+
+        this.cube = this.managers.geometry.createTestCube();
+        this.room2.floor.add(this.cube);
     }
 
     /**
@@ -270,6 +341,7 @@ class GalleryApp {
 
         const deltaTime = this.calculateDeltaTime(currentTime);
         this.updateScene(deltaTime, currentTime);
+        this.updateFractal(deltaTime);
         this.renderScene();
     }
 
@@ -299,6 +371,8 @@ class GalleryApp {
             this.managers.multiplayer.sendMovement(cameraPosition, cameraRotation);
         }
 
+        //
+
         // Animate objects with deltaTime for smooth animations
         this.managers.geometry.animateObjects(deltaTime);
 
@@ -316,24 +390,53 @@ class GalleryApp {
             }
         }
     }
-
+    
     /**
      * Render the current frame
      */
+    /*
     renderScene() {
         this.managers.renderer.render(
             this.managers.scene.getScene(),
             this.managers.camera.getCamera()
         );
     }
+    */
+
+    renderScene() {
+        if (this.composer) {
+            this.composer.render(); // Composer rendert jetzt mit Bloom
+        } else {
+            this.managers.renderer.render(
+                this.managers.scene.getScene(),
+                this.managers.camera.getCamera()
+            );
+        }
+    }
+
 
     /**
      * Handle window resize
      */
+    /*
     handleResize() {
         this.managers.camera.updateAspectRatio();
         this.managers.renderer.handleResize();
     }
+    */
+
+    handleResize() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    this.managers.camera.updateAspectRatio();
+    this.managers.renderer.handleResize();
+
+    if (this.composer) {
+        this.composer.setSize(width, height);
+    }
+}
+
 
     /**
      * Create local player body for first-person view
@@ -435,6 +538,8 @@ class GalleryApp {
         return bodyGroup;
     }
 
+    
+
     /**
      * Update local player body to follow camera movement and animate walking
      */
@@ -531,6 +636,8 @@ class GalleryApp {
                 );
             }
         }
+
+        
     }
 
     /**
@@ -539,7 +646,11 @@ class GalleryApp {
     getManagers() {
         return this.managers;
     }
+    
 }
+
+
+
 
 // Initialize the gallery when the page loads
 document.addEventListener('DOMContentLoaded', () => {
