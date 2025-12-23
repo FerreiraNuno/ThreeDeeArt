@@ -1,4 +1,1 @@
-in camera.js wird festgelegt, dass Character Raum nicht verlassen kann durch Ortseinschränkung
-	-> später durch BB und Kollisionsabfrage lösen, s. auch geometry.js
-
-add Paintings, update Textures, BoundingBoxes, Kollisionserkennung, Shader, Spotlights, Lichter angepasst
+Fraktalobjekte, Glow-Effekt/Bloom, eigene Shader&Material, Refactoring, Galerie/Licht erweitert, Lerp-Fkt, mapping, cursor

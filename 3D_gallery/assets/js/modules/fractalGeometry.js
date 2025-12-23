@@ -16,7 +16,6 @@ export default class DragonFractalGeometry extends THREE.Object3D {
         this.geometry = new THREE.BufferGeometry(); //Vertices auf GPU -> Berechnungen viel schneller
 
         this.material = createGlowMaterial(this.color, this.intensity);
-        //this.material = new THREE.LineBasicMaterial({ vertexColors: true });    //pro Vertex Farbe
         this.line = new THREE.Line(this.geometry, this.material);
 
         this.add(this.line);    //line wird als child an container angehängt

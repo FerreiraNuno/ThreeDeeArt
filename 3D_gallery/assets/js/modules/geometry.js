@@ -5,7 +5,6 @@ import { PersonManager } from './person.js';
 import DragonFractal from './fractal.js';
 import DragonFractalGeometry from './fractalGeometry.js';
 import { createGlowMaterial } from './glowMaterial.js';
-//import GUI from 'https://cdn.jsdelivr.net/npm/lil-gui@0.18.0/dist/lil-gui.esm.min.js';
 
 /**
  * Geometry and objects management module
@@ -13,12 +12,22 @@ import { createGlowMaterial } from './glowMaterial.js';
 export class GeometryManager {
     constructor(scene) {
         this.scene = scene;
+        this.lightingManager = null;
         this.objects = {};
         this.rooms = {};
         this.corridors = {};
         this.textureLoader = new THREE.TextureLoader();
         this.personManager = new PersonManager(scene);
-        //this.initGUI();
+    }
+
+    // Setter, um den LightingManager zu verknüpfen
+    setLightingManager(lightingManager) {
+        this.lightingManager  = lightingManager;
+    }
+
+    // Getter
+    getLightingManager() {
+        return this.lightingManager;
     }
 
     /**
@@ -176,70 +185,6 @@ export class GeometryManager {
         return ceiling;
     }
 
-    //hier auch BBox
-    createTestCube() {
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = createGlowMaterial(0xff00ff, 1.5);     //Glow-Effekt noch komisch
-        const cube = new THREE.Mesh(geometry, material);
-        cube.position.set(0, 5, 2); // Center of room, sitting properly on floor
-        cube.castShadow = true;
-        cube.receiveShadow = true;
-
-        cube.BBox = new THREE.Box3().setFromObject(cube);
-        //kann später gelöscht werden
-        //const bboxHelper = new THREE.Box3Helper(cube.BBox, 0x0000ff);
-        //this.scene.add(bboxHelper);
-
-        this.objects.cube = cube;
-        this.scene.add(cube);
-        return cube;
-    }
-
-    createPainting(imageURL, width, height, position, rotation) {
-        const textureLoader = new THREE.TextureLoader();
-        const paintingTexture = textureLoader.load(imageURL);
-        const paintingMaterial = new THREE.MeshLambertMaterial({
-            map: paintingTexture,
-        });
-        const paintingGeometry = new THREE.PlaneGeometry(width, height);
-        const painting = new THREE.Mesh(paintingGeometry, paintingMaterial);
-        painting.position.set(position.x, position.y, position.z);
-        painting.rotation.set(rotation.x, rotation.y, rotation.z);
-        this.scene.add(painting);
-        this.objects[imageURL] = painting;
-        return painting;
-    }
-
-    /**
-     * Create a player prop using the PersonManager
-     * @param {THREE.Vector3} position - Position to place the player
-     * @param {Object} options - Customization options
-     * @returns {THREE.Group} The player group object
-     */
-    createPlayerProp(position = new THREE.Vector3(0, 0, 0), options = {}) {
-        const player = this.personManager.createPlayerProp(position, options);
-        this.objects.player = player;
-        return player;
-    }
-
-    /**
-     * Create a person using the PersonManager
-     * @param {THREE.Vector3} position - Position to place the person
-     * @param {Object} options - Customization options
-     * @returns {THREE.Group} The person group object
-     */
-    createPerson(position = new THREE.Vector3(0, 0, 0), options = {}) {
-        return this.personManager.createPerson(position, options);
-    }
-
-    /**
-     * Get the PersonManager instance
-     * @returns {PersonManager} The person manager
-     */
-    getPersonManager() {
-        return this.personManager;
-    }
-
     /**
      * Create a complete room with floor, walls, and ceiling
      * @param {THREE.Vector3} center - Room center position
@@ -283,6 +228,11 @@ export class GeometryManager {
         this.corridors[name] = corridor;
         return corridor;
     }
+
+    getCorridorGroup() {
+        return this.corridors;
+    }
+
 
     /**
      * Create a wall with a doorway opening
@@ -401,27 +351,144 @@ export class GeometryManager {
         return walls;
     }
 
+    createGalleryStructure() {
+        // Create Room 1 (main gallery room) with doorway to corridor
+        const room1Center = new THREE.Vector3(
+            GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.x,
+            0,
+            GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.z
+        );
+
+        this.createRoom(room1Center, 'room1', { front: 'doorway' });
+
+        // Create corridor connecting the rooms
+        const corridorStart = new THREE.Vector3(0, 0, GALLERY_CONFIG.ROOM.DEPTH / 2);
+        const corridorEnd = new THREE.Vector3(0, 0, GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.z - GALLERY_CONFIG.ROOM.DEPTH / 2);
+        this.createCorridor(corridorStart, corridorEnd, 'mainCorridor');
+
+        // Create Room 2 (empty gallery room) with doorway to corridor
+        const room2Center = new THREE.Vector3(
+            GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.x,
+            0,
+            GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.z
+        );
+        this.createRoom(room2Center, 'room2', { back: 'doorway' });
+    }
+
+    /**
+     * Create a player prop using the PersonManager
+     * @param {THREE.Vector3} position - Position to place the player
+     * @param {Object} options - Customization options
+     * @returns {THREE.Group} The player group object
+     */
+    createPlayerProp(position = new THREE.Vector3(0, 0, 0), options = {}) {
+        const player = this.personManager.createPlayerProp(position, options);
+        this.objects.player = player;
+        return player;
+    }
+
+    /**
+     * Create a person using the PersonManager
+     * @param {THREE.Vector3} position - Position to place the person
+     * @param {Object} options - Customization options
+     * @returns {THREE.Group} The person group object
+     */
+    createPerson(position = new THREE.Vector3(0, 0, 0), options = {}) {
+        return this.personManager.createPerson(position, options);
+    }
+
+    /**
+     * Get the PersonManager instance
+     * @returns {PersonManager} The person manager
+     */
+    getPersonManager() {
+        return this.personManager;
+    }
+
+    //hier auch BBox
+    createCube() {
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = createGlowMaterial(0xff00ff, 1.5);     //Glow-Effekt noch komisch
+        const cube = new THREE.Mesh(geometry, material);
+        cube.position.set(0, -9, 5); // Center of room, sitting properly on floor
+        cube.castShadow = true;
+        cube.receiveShadow = true;
+
+        cube.BBox = new THREE.Box3().setFromObject(cube);
+        //kann später gelöscht werden
+        //const bboxHelper = new THREE.Box3Helper(cube.BBox, 0x0000ff);
+        //this.scene.add(bboxHelper);
+
+        this.objects.cube = cube;
+        this.rooms['room2'].floor.add(cube);
+
+        this.lightingManager.addEmissiveLight
+        (
+            cube,
+            {
+            color: 0xff00ff,
+            intensity: 1.2,
+            distance: 12
+            }
+        );
+
+        /*
+        // Funktion, die Shader-Uniforms jedes Frame updatet
+        cube.updateLightUniforms = () => {
+            material.uniforms.pointLightPosition.value = cube.position;
+            material.uniforms.pointLightColor.value = cube.color;
+            material.uniforms.pointLightIntensity.value = cube.intensity;
+        };
+        */
+
+        return cube;
+    }
+
+    animateCube(deltaTime){
+        if (this.objects.cube) {
+            const speed = GALLERY_CONFIG.ANIMATION.CUBE_ROTATION_SPEED;
+            //this.objects.cube.rotation.y += speed;
+            this.objects.cube.rotation.z += speed;
+
+            //this.objects.cube.updateLightUniforms();
+        }
+    }
+
+    createPainting(imageURL, width, height, position, rotation) {
+        const textureLoader = new THREE.TextureLoader();
+        const paintingTexture = textureLoader.load(imageURL);
+        const paintingMaterial = new THREE.MeshLambertMaterial({
+            map: paintingTexture,
+        });
+        const paintingGeometry = new THREE.PlaneGeometry(width, height);
+        const painting = new THREE.Mesh(paintingGeometry, paintingMaterial);
+        painting.position.set(position.x, position.y, position.z);
+        painting.rotation.set(rotation.x, rotation.y, rotation.z);
+        this.scene.add(painting);
+        this.objects[imageURL] = painting;
+        return painting;
+    }
+
     
-    createDragonFractal(wallName ,wallHeight = GALLERY_CONFIG.ROOM.WALL_HEIGHT, options = {}) {
-        //Wand aus der Objekt-Liste holen
-        const roomWalls = this.objects['room1_walls'];
-        const wall = roomWalls[wallName];
-                
+    createDragonFractal(roomName, wallName , wallHeight = GALLERY_CONFIG.ROOM.WALL_HEIGHT, options = {}, 
+        scaleX, scaleY, scaleZ) 
+    {             
         // Fraktal erzeugen
         const dragon = new DragonFractalGeometry(options);
+
+        // Wand holen
+        const wall = this.rooms[roomName].walls[wallName];
    
-        // Standard-Skalierung
-        const scaleX = 5;
-        const scaleY = 5;
-        const scaleZ = 1;
+        //Skalierung
         dragon.scale.set(scaleX, scaleY, scaleZ);
 
         // Position in Wand-Lokalsystem
-        const offset = 0.01;
-        const wallNormal = new THREE.Vector3(0,0,1);
-        dragon.position.copy(wallNormal.multiplyScalar(offset));    //entlang der Normalen verschieben
+        const wallNormal = new THREE.Vector3(0,0,1); //Default
+        const Rotation = wall.rotation.z;
+        wallNormal.applyAxisAngle(new THREE.Vector3(0, 0, 1), Rotation);   //Normale rotieren anhand Ausrichtung des Wand
+        dragon.position.add(wallNormal.multiplyScalar(0.01));    //entlang der Normalen verschieben mit Offset 0.01
 
-        // Fraktal als Child an die Wand hängen
+        //Fraktal als Child an Wand anhängen
         wall.add(dragon);
 
         // Objekt speichern
@@ -430,29 +497,27 @@ export class GeometryManager {
         return dragon;
     }
 
-    /*
-    initGUI() {
-        const gui = new GUI();
-        const params = {
-            scaleX: 5,
-            scaleY: 5,
-            scaleZ: 1
-        };
+    createCarpet(roomCenter, width, depth, textureURL = null) {
+        const geometry = new THREE.PlaneGeometry(width, depth);
+        let material;
+        
+        if(textureURL){
+            const texture = new THREE.TextureLoader().load(textureURL);
+            material = new THREE.MeshLambertMaterial({ map: texture });
+        } else {
+            material = new THREE.MeshLambertMaterial({ color: 0xAA3333 });
+        }
+        
+        const carpet = new THREE.Mesh(geometry, material);
+        carpet.receiveShadow = true;
 
-        gui.add(params, 'scaleX', 1, 10).onChange((value) => {
-            const dragon = this.objects['dragon_wall1'];
-            if (dragon) dragon.scale.x = value;
-        });
-        gui.add(params, 'scaleY', 1, 10).onChange((value) => {
-            const dragon = this.objects['dragon_wall1'];
-            if (dragon) dragon.scale.y = value;
-        });
-        gui.add(params, 'scaleZ', 1, 5).onChange((value) => {
-            const dragon = this.objects['dragon_wall1'];
-            if (dragon) dragon.scale.z = value;
-        });
+        // Auf Boden legen (X/Z-Ebene)
+        carpet.position.copy(roomCenter);
+        carpet.position.z += 0.1; // leicht über Boden, kein z-fighting
+            
+        this.rooms['room1'].floor.add(carpet);
+        return carpet;
     }
-    */
 
 
     getObjects() {
@@ -460,12 +525,6 @@ export class GeometryManager {
     }
 
     animateObjects(deltaTime = 0.016) {
-        if (this.objects.cube) {
-            const speed = GALLERY_CONFIG.ANIMATION.CUBE_ROTATION_SPEED;
-            this.objects.cube.rotation.y += speed;
-            this.objects.cube.rotation.z += speed;
-        }
-
         // Animate persons with deltaTime for smooth animations
         this.personManager.animatePersons(deltaTime);
     }

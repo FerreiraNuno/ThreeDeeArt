@@ -7,6 +7,8 @@ import { GALLERY_CONFIG } from './config/constants.js';
 import { EffectComposer } from 'EffectComposer';
 import { RenderPass } from 'RenderPass';
 import { UnrealBloomPass } from 'UnrealBloomPass';
+import { Intersect } from './modules/intersect.js';
+import { AudioManager } from './modules/audio.js';
 
 
 /**
@@ -19,6 +21,10 @@ class RendererManager {
         });
 
         this.setupRenderer();
+
+        // Tone Mapping aktivieren
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping; // Filmischer Look
+        this.renderer.toneMappingExposure = 1.2;                // Helligkeit
     }
 
     setupRenderer() {
@@ -83,8 +89,10 @@ class GalleryApp {
         this.isRunning = false;
         this.lastTime = 0;
         this.fractalTimer = 0;
-        this.fractalInterval = 2.5; // Sekunden pro Iteration
+        this.fractalInterval = 1.5; // Sekunden pro Iteration
         this.dragon = null;
+        this.colorLerpFactor = 0;
+        this.listener = new THREE.AudioListener();
         this.init();
     }
 
@@ -96,8 +104,9 @@ class GalleryApp {
             this.initializeManagers();
             this.setupManagerConnections();
             this.setupScene();
-            this.setupPostProcessing();
+            this.setupIntersect();
             this.setupEventListeners();
+            this.setupPostProcessing();
             this.start();
 
             console.log('3D Gallery initialized successfully');
@@ -113,8 +122,19 @@ class GalleryApp {
         this.managers.scene = new SceneManager();
         this.managers.renderer = new RendererManager();
         this.managers.camera = new CameraManager(this.managers.renderer.getRenderer());
-        this.managers.lighting = new LightingManager(this.managers.scene.getScene());
+        //this.managers.lighting = new LightingManager(this.managers.scene.getScene());
+        //this.managers.geometry = new GeometryManager(this.managers.scene.getScene(), this.managers.lighting);
         this.managers.geometry = new GeometryManager(this.managers.scene.getScene());
+        this.managers.lighting = new LightingManager(this.managers.scene.getScene());
+
+        // Post-init: beide Manager kennen sich -> keine zyklische Abhängigkeit!!!
+        this.managers.geometry.setLightingManager(this.managers.lighting);
+        this.managers.lighting.setGeometryManager(this.managers.geometry);
+        
+        this.managers.camera.getCamera().add(this.listener);
+        this.managers.audio = new AudioManager(this.listener);
+
+        console.log(this.managers.geometry.objects);
 
         // Initialize multiplayer manager
         this.managers.multiplayer = new MultiplayerManager(
@@ -171,10 +191,30 @@ class GalleryApp {
      * Setup the 3D scene with all objects
      */
     setupScene() {
-        this.createGalleryStructure();
+        this.managers.geometry.createGalleryStructure();
+        this.managers.geometry.createCube();
         this.createArtworks();
         this.createFractal();
+        this.doCarpet();
+        this.createAudio();
     }
+
+    
+    setupIntersect() {
+        this.intersect = new Intersect();
+
+        // Maus-Event für Raycasting
+        window.addEventListener('mousemove', (e) => this.intersect.updateMouse(e, this.managers.camera.getCamera()));
+    }
+
+    //Objekte hinzufügen -> vllt in intersect
+    addIntersectObjects(objects) {
+        if (this.intersect) 
+            this.intersect.setObjects(objects);
+    }
+    
+
+
 
     setupPostProcessing() {
         const renderer = this.managers.renderer.getRenderer();
@@ -206,19 +246,26 @@ class GalleryApp {
     }
 
     createFractal() {
-        //Fraktal erzeugen
+        //Fraktale erzeugen
         this.dragon = this.managers.geometry.createDragonFractal(
-            'backWall', 
+            'room2',
+            'rightWall', 
             GALLERY_CONFIG.ROOM.WALL_HEIGHT, 
-            { color: 0xff0000, maxOrder: 12 }
+            { color: 0xff0000, maxOrder: 12 },
+            7, 5, 1
+           
         );
-
-        console.log(this.managers.scene.getScene());
-
+        this.dragon2 = this.managers.geometry.createDragonFractal(
+            'room2',
+            'leftWall', 
+            GALLERY_CONFIG.ROOM.WALL_HEIGHT, 
+            { color: 0x0000FF, maxOrder: 11 },
+            6, 2, 1
+        ); 
     }
 
     updateFractal(deltaTime) {
-        if (!this.dragon) return;
+        if (!this.dragon || !this.dragon2) return;
             
         //Zeit aufsummieren
         this.fractalTimer += deltaTime;
@@ -231,40 +278,15 @@ class GalleryApp {
         // Abbruch, wenn maxOrder erreicht
         if (this.dragon.fractal.getOrder() >= this.dragon.maxOrder) {
             this.dragon.reset();
-            this.fractalTimer = -1; //1s Pause
+            return;
+        }
+        if (this.dragon2.fractal.getOrder() >= this.dragon2.maxOrder) {
+            this.dragon2.reset();
             return;
         }
 
         this.dragon.iterate();
-    }
-
-    /**
-     * Create the basic gallery structure with multiple rooms and corridor
-     */
-    createGalleryStructure() {
-        // Create Room 1 (main gallery room) with doorway to corridor
-        const room1Center = new THREE.Vector3(
-            GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.x,
-            0,
-            GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.z
-        );
-        this.room1 = this.managers.geometry.createRoom(room1Center, 'room1', { front: 'doorway' });
-
-        // Create corridor connecting the rooms
-        const corridorStart = new THREE.Vector3(0, 0, GALLERY_CONFIG.ROOM.DEPTH / 2);
-        const corridorEnd = new THREE.Vector3(0, 0, GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.z - GALLERY_CONFIG.ROOM.DEPTH / 2);
-        this.mainCorridor = this.managers.geometry.createCorridor(corridorStart, corridorEnd, 'mainCorridor');
-
-        // Create Room 2 (empty gallery room) with doorway to corridor
-        const room2Center = new THREE.Vector3(
-            GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.x,
-            0,
-            GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.z
-        );
-        this.room2 = this.managers.geometry.createRoom(room2Center, 'room2', { back: 'doorway' });
-
-        this.cube = this.managers.geometry.createTestCube();
-        this.room2.floor.add(this.cube);
+        this.dragon2.iterate();
     }
 
     /**
@@ -286,6 +308,27 @@ class GalleryApp {
                 height: 4,
                 position: new THREE.Vector3(12.49, 4, GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.z),
                 rotation: new THREE.Vector3(0, -Math.PI / 2, 0)
+            },
+            {
+                image: 'assets/images/claudeMonet.jpg',
+                width: 8,
+                height: 4,
+                position: new THREE.Vector3(0, 4, -12.49),
+                rotation: new THREE.Vector3(0, 0, 0)
+            },
+            {
+                image: 'assets/images/claudeMonet2.jpg',
+                width: 5,
+                height: 2.5,
+                position: new THREE.Vector3(-8, 4, -12.49),
+                rotation: new THREE.Vector3(0, 0, 0)
+            },
+            {
+                image: 'assets/images/claudeMonet3.jpg',
+                width: 5,
+                height: 2.5,
+                position: new THREE.Vector3(8, 4, -12.49),
+                rotation: new THREE.Vector3(0, 0, 0)
             }
         ];
 
@@ -295,7 +338,7 @@ class GalleryApp {
                 image: 'assets/images/reflection.jpg',
                 width: 4,
                 height: 3,
-                position: new THREE.Vector3(-GALLERY_CONFIG.CORRIDOR.WIDTH / 2 + 0.01, 3, GALLERY_CONFIG.LAYOUT.CORRIDOR_CENTER.z),
+                position: new THREE.Vector3(-GALLERY_CONFIG.CORRIDOR.WIDTH / 2 + 0.01, 3, GALLERY_CONFIG.LAYOUT.CORRIDOR_CENTER.z-12.5),
                 rotation: new THREE.Vector3(0, Math.PI / 2, 0)
             }
         ];
@@ -314,7 +357,113 @@ class GalleryApp {
         });
     }
 
-    /**
+    doCarpet() {
+        //Teppich erzeugen
+        this.carpet = this.managers.geometry.createCarpet(
+            new THREE.Vector3(0, 8, 0),
+            16, 
+            3, 
+
+        );
+        this.carpet2 = this.managers.geometry.createCarpet(
+            new THREE.Vector3(-7.5, -1, 0),
+            12, 
+            3, 
+        );
+        this.carpet2.rotation.z = -Math.PI / 2;
+        this.carpet3 = this.managers.geometry.createCarpet(
+            new THREE.Vector3(7.5, -1, 0),
+            12, 
+            3, 
+        );
+        this.carpet3.rotation.z = Math.PI / 2;
+    }
+
+    updateCorridorLights(deltaTime) {
+        const corridor = this.managers.lighting.lights.corridor;
+
+        // Initialisierung der Ziel-Farben beim ersten Aufruf
+        if (!this.spotTargetColors || this.spotTargetColors.length === 0) {
+            this.spotTargetColors = corridor.map(spot => spot.color.clone());
+            this.colorLerpFactor = 0;
+            // Setze auch Startfarben als aktuelle Farben
+            this.spotStartColors = corridor.map(spot => spot.color.clone());
+        }
+
+        this.colorLerpFactor += deltaTime * 0.5; // Geschwindigkeit anpassen
+
+        corridor.forEach((spot, i) => {
+            // Lerp zwischen Start- und Ziel-Farbe
+            spot.color.copy(this.spotStartColors[i]).lerp(this.spotTargetColors[i], this.colorLerpFactor);
+        });
+
+        if (this.colorLerpFactor >= 1) {
+            // Wenn Lerp abgeschlossen, neue Ziel-Farben wählen
+            this.spotStartColors = corridor.map(spot => spot.color.clone());
+            this.spotTargetColors = corridor.map(() => new THREE.Color(Math.random(), Math.random(), Math.random()));
+            this.colorLerpFactor = 0;
+        }
+    }
+
+    updateCorridorLightIntensity(deltaTime) {
+        const room2lights = this.managers.lighting.lights.room2lights;
+        if (!room2lights || room2lights.length === 0) return;
+
+        if (this.intensityTime === undefined) {
+            this.intensityTime = 0;
+        }
+
+        this.intensityTime += deltaTime * 1.2;
+
+        const min = 0.5;
+        const max = 5;
+
+        const t = (Math.sin(this.intensityTime * 0.8) + 1) / 2;
+        const intensity = THREE.MathUtils.lerp(min, max, t);
+
+        room2lights.forEach(spot => {
+            spot.intensity = intensity;
+        });
+    }
+
+    //Problem: spielt Musik im Rendering
+    async createAudio() {
+        const textureLoader = new THREE.TextureLoader();
+
+        // Textur asynchron laden
+        const musicboxTex = await new Promise((resolve, reject) => {
+                textureLoader.load(
+                    'assets/images/box.jpg',
+                    (texture) => resolve(texture),
+                    undefined,
+                    (err) => reject(err)
+                );
+            });
+
+            const boxMaterial = new THREE.MeshLambertMaterial({
+                map: musicboxTex,
+            });
+
+            const musicboxGeo = new THREE.BoxGeometry(1, 1, 0.5);
+            const musicbox = new THREE.Mesh(musicboxGeo, boxMaterial);
+
+            // Position & Rotation setzen **auf dem Mesh**
+            musicbox.position.set(1.35, 0.8, 0);
+            musicbox.rotation.y = Math.PI / 2; // optional 90° drehen
+
+            this.dragon2.add(musicbox);
+
+            this.managers.audio.addPositionalAudio(
+                musicbox,
+                'assets/audio/background.mp3',
+                true,   // loop
+                0.3,    // volume
+                10      // refDistance
+            );
+    }
+
+
+    /**carpet.rotation.x = -Math.PI / 2;
      * Start the animation loop
      */
     start() {
@@ -342,6 +491,9 @@ class GalleryApp {
         const deltaTime = this.calculateDeltaTime(currentTime);
         this.updateScene(deltaTime, currentTime);
         this.updateFractal(deltaTime);
+        this.managers.geometry.animateCube(deltaTime);
+        this.updateCorridorLights(deltaTime);
+        this.updateCorridorLightIntensity(deltaTime);
         this.renderScene();
     }
 
@@ -353,7 +505,8 @@ class GalleryApp {
         this.lastTime = currentTime;
         return deltaTime;
     }
-
+    
+    
     /**
      * Update all scene elements
      */
@@ -370,14 +523,6 @@ class GalleryApp {
             const cameraRotation = this.managers.camera.getRotation();
             this.managers.multiplayer.sendMovement(cameraPosition, cameraRotation);
         }
-
-        //
-
-        // Animate objects with deltaTime for smooth animations
-        this.managers.geometry.animateObjects(deltaTime);
-
-        // TODO: Future shader material time updates for fractals
-        // this.updateShaderUniforms(currentTime);
     }
 
     /**
@@ -390,18 +535,6 @@ class GalleryApp {
             }
         }
     }
-    
-    /**
-     * Render the current frame
-     */
-    /*
-    renderScene() {
-        this.managers.renderer.render(
-            this.managers.scene.getScene(),
-            this.managers.camera.getCamera()
-        );
-    }
-    */
 
     renderScene() {
         if (this.composer) {
@@ -412,6 +545,14 @@ class GalleryApp {
                 this.managers.camera.getCamera()
             );
         }
+
+        // Overlay-Fadenkreuz rendern
+        this.managers.renderer.getRenderer().autoClear = false;
+        this.managers.renderer.getRenderer().render(
+            this.intersect.getOverlayScene(),
+            this.intersect.getOverlayCamera()
+        );
+        this.managers.renderer.getRenderer().autoClear = true;
     }
 
 
@@ -635,11 +776,8 @@ class GalleryApp {
                     0.2
                 );
             }
-        }
-
-        
+        }   
     }
-
     /**
      * Get access to managers for debugging or extensions
      */
