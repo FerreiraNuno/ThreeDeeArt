@@ -3,7 +3,6 @@ import { CameraManager } from './modules/camera.js';
 import { LightingManager } from './modules/lighting.js';
 import { GeometryManager } from './modules/geometry.js';
 import { MultiplayerManager } from './modules/multiplayer.js';
-import { PortalManager } from './modules/portal.js';
 import { GALLERY_CONFIG } from './config/constants.js';
 import { EffectComposer } from 'EffectComposer';
 import { RenderPass } from 'RenderPass';
@@ -144,11 +143,6 @@ class GalleryApp {
             this.managers.camera
         );
 
-        // Initialize portal manager for "Not to Be Reproduced" effect
-        this.managers.portal = new PortalManager(
-            this.managers.scene.getScene(),
-            this.managers.renderer.getRenderer()
-        );
 
         // Create local player body for first-person view
         this.createLocalPlayerBody();
@@ -544,6 +538,7 @@ class GalleryApp {
     }
 
     renderScene() {
+
         if (this.composer) {
             this.composer.render(); // Composer rendert jetzt mit Bloom
         } else {
@@ -597,7 +592,7 @@ class GalleryApp {
         // Create a full person model using PersonManager
         // Person group at Y=-0.2 puts feet on ground when camera is at Y=1.6
         const personGroupGroundOffset = -0.2;
-        
+
         this.localPlayerBody = personManager.createPerson(
             new THREE.Vector3(cameraPos.x, personGroupGroundOffset, cameraPos.z),
             {
@@ -623,7 +618,7 @@ class GalleryApp {
         // Remove the person from scene (PersonManager adds it automatically)
         // We'll manage its position manually to follow the camera
         this.managers.scene.getScene().remove(this.localPlayerBody);
-        
+
         // Remove bounding box helper for local player (not needed)
         if (this.localPlayerBody.bboxHelper) {
             this.managers.scene.getScene().remove(this.localPlayerBody.bboxHelper);
@@ -646,7 +641,7 @@ class GalleryApp {
         const cameraPos = this.managers.camera.getPosition();
         const cameraKeys = this.managers.camera.keys;
         const jumpState = this.managers.camera.jumpState;
-        
+
         // Person group ground offset (feet on ground when camera at Y=1.6)
         // Adjusted: camera is slightly lower (around neck level) and forward in the head
         const personGroupGroundOffset = -0.25; // Lower the body slightly
@@ -655,7 +650,7 @@ class GalleryApp {
         // Get camera direction to offset body backward from camera
         const direction = this.managers.camera.getWorldDirection();
         const yRotation = Math.atan2(direction.x, direction.z);
-        
+
         // Offset body backward from camera position (camera is in front of body)
         const bodyOffset = 0.25; // How far behind the camera the body center is
         const offsetX = -direction.x * bodyOffset;
@@ -664,7 +659,7 @@ class GalleryApp {
         // Update position to follow camera with offset
         this.localPlayerBody.position.x = cameraPos.x + offsetX;
         this.localPlayerBody.position.z = cameraPos.z + offsetZ;
-        
+
         // Calculate Y position: account for jumping
         const jumpHeight = Math.max(0, cameraPos.y - cameraHeight);
         this.localPlayerBody.position.y = personGroupGroundOffset + jumpHeight;
@@ -723,7 +718,7 @@ class GalleryApp {
                     0.15
                 );
             }
-            
+
             // Subtle torso sway for more natural walking
             if (bodyParts.torso) {
                 const torsoSway = Math.sin(animState.walkCycle * 0.5) * 0.03;
@@ -768,7 +763,7 @@ class GalleryApp {
                     0.1
                 );
             }
-            
+
             // Reset torso sway
             if (bodyParts.torso) {
                 bodyParts.torso.rotation.z = THREE.MathUtils.lerp(
