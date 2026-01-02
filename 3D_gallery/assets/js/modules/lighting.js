@@ -17,7 +17,7 @@ export class LightingManager {
         this.geometry = geometry;
     }
     //Getter
-    getGeometryManager(){
+    getGeometryManager() {
         return this.geometry;
     }
 
@@ -28,7 +28,7 @@ export class LightingManager {
             0.05
         );
         this.scene.add(this.lights.ambient);
-        
+
         // spotlights (color, intensity, distance, angle, ränder, Lichtabnahme)
         this.lights.spotlight1 = new THREE.SpotLight(
             GALLERY_CONFIG.LIGHTING.SPOTLIGHT.COLOR,
@@ -38,7 +38,7 @@ export class LightingManager {
             0.25,
             0.9
         );
-        
+
         this.lights.spotlight1.position.set(12.40, 7, 0);
         this.lights.spotlight1.target.position.set(12.4, 0, 0);
         this.lights.spotlight1.castShadow = true;
@@ -52,13 +52,13 @@ export class LightingManager {
             0.25,
             0.9
         );
-        
+
         this.lights.spotlight2.position.set(-12.40, 7, 3.5);
         this.lights.spotlight2.target.position.set(-12.4, 0, 0);
         this.lights.spotlight2.castShadow = true;
         this.scene.add(this.lights.spotlight2, this.lights.spotlight2.target);
 
-         this.lights.spotlight3 = new THREE.SpotLight(
+        this.lights.spotlight3 = new THREE.SpotLight(
             GALLERY_CONFIG.LIGHTING.SPOTLIGHT.COLOR,
             5,
             100,
@@ -66,7 +66,7 @@ export class LightingManager {
             0.25,
             0.9
         );
-        
+
         this.lights.spotlight3.position.set(-12.40, 7, -3.5);
         this.lights.spotlight3.target.position.set(-12.4, 0, 0);
         this.lights.spotlight3.castShadow = true;
@@ -82,7 +82,7 @@ export class LightingManager {
         );
 
         this.lights.spotlight4.position.set(-14, 0, -11);
-        this.lights.spotlight4.target.position.set( 0, -4, -12.49);
+        this.lights.spotlight4.target.position.set(0, -4, -12.49);
         this.lights.spotlight4.castShadow = true;
         this.scene.add(this.lights.spotlight4, this.lights.spotlight4.target);
 
@@ -96,11 +96,11 @@ export class LightingManager {
         );
 
         this.lights.spotlight5.position.set(14, 0, -11);
-        this.lights.spotlight5.target.position.set( 0, -4, -12.49);
+        this.lights.spotlight5.target.position.set(0, -4, -12.49);
         this.lights.spotlight5.castShadow = true;
         this.scene.add(this.lights.spotlight5, this.lights.spotlight5.target);
 
-         this.lights.spotlight6 = new THREE.SpotLight(
+        this.lights.spotlight6 = new THREE.SpotLight(
             GALLERY_CONFIG.LIGHTING.SPOTLIGHT.COLOR,
             3,
             15,
@@ -110,30 +110,30 @@ export class LightingManager {
         );
 
         this.lights.spotlight6.position.set(0, -2, -11);
-        this.lights.spotlight6.target.position.set( 0, 7, -12.49);
+        this.lights.spotlight6.target.position.set(0, 7, -12.49);
         this.lights.spotlight6.castShadow = true;
-        this.scene.add(this.lights.spotlight6, this.lights.spotlight6.target);        
+        this.scene.add(this.lights.spotlight6, this.lights.spotlight6.target);
 
         // Spotlights für Corridor erstellen
-        this.lights.spotlight7 = new THREE.SpotLight(0xffffff, 5, 15, Math.PI/2 , 0.5, 1);
-        this.lights.spotlight8 = new THREE.SpotLight(0xffffff, 5, 15, Math.PI/2 , 0.5, 1);
+        this.lights.spotlight7 = new THREE.SpotLight(0xffffff, 5, 15, Math.PI / 2, 0.5, 1);
+        this.lights.spotlight8 = new THREE.SpotLight(0xffffff, 5, 15, Math.PI / 2, 0.5, 1);
 
         this.lights.spotlight7.position.set(0, 10, 35);
-        this.lights.spotlight7.target.position.set( 0, 0, 35);
+        this.lights.spotlight7.target.position.set(0, 0, 35);
         this.lights.spotlight7.castShadow = true;
-        
+
         this.lights.spotlight8.position.set(0, 10, 15);
-        this.lights.spotlight8.target.position.set( 0, 0, 15);
+        this.lights.spotlight8.target.position.set(0, 0, 15);
         this.lights.spotlight8.castShadow = true;
 
         this.scene.add(this.lights.spotlight7, this.lights.spotlight7.target);
         this.scene.add(this.lights.spotlight8, this.lights.spotlight8.target);
 
         // Spotlights für room2 erstellen
-        this.lights.spotlight9 = new THREE.SpotLight(new THREE.Color().setRGB(0.6, 0.0, 3.8), 3, 17.5, Math.PI , 0.5, 1);
-        
+        this.lights.spotlight9 = new THREE.SpotLight(new THREE.Color().setRGB(0.6, 0.0, 3.8), 3, 17.5, Math.PI, 0.5, 1);
+
         this.lights.spotlight9.position.set(0, 8, 57.5);
-        this.lights.spotlight9.target.position.set( 0, 0, 57.5);
+        this.lights.spotlight9.target.position.set(0, 0, 57.5);
         this.lights.spotlight9.castShadow = true;
 
         this.scene.add(this.lights.spotlight9, this.lights.spotlight9.target);
@@ -142,7 +142,7 @@ export class LightingManager {
         this.lights.corridor = [this.lights.spotlight7, this.lights.spotlight8];
         //für Lerp-Intensity
         this.lights.room2lights = [this.lights.spotlight9]
-    
+
         /*
         // Directional light
         // Lichtquelle in obere Ecke des Raumes für Beleuchtung
@@ -166,7 +166,7 @@ export class LightingManager {
         */
 
         //Decke heller machen
-       this.lights.ceilingDirectional = new THREE.DirectionalLight(0xffffff, 0.2);
+        this.lights.ceilingDirectional = new THREE.DirectionalLight(0xffffff, 0.2);
 
         this.lights.ceilingDirectional.position.set(0, 0, 0);
         this.lights.ceilingDirectional.target.position.set(
@@ -188,8 +188,8 @@ export class LightingManager {
         this.lights.ceilingDirectional.shadow.camera.bottom = shadowConfig.CAMERA_BOTTOM;
 
         this.scene.add(this.lights.ceilingDirectional);
-        
-        
+
+
         // point lights
         // Punktlichter an der Decke verteilen
         this.lights.ceilingLights = [];
@@ -207,7 +207,8 @@ export class LightingManager {
                 const light = new THREE.PointLight(
                     GALLERY_CONFIG.LIGHTING.POINT.COLOR,
                     1,
-                    GALLERY_CONFIG.LIGHTING.POINT.DISTANCE
+                    GALLERY_CONFIG.LIGHTING.POINT.DISTANCE,
+                    1
                 );
 
                 // Position gleichmäßig verteilen
@@ -233,13 +234,13 @@ export class LightingManager {
         }
     }
 
-    addEmissiveLight(object, 
-    {
-        color = 0xff00ff,
-        intensity = 1,
-        distance = 10,
-        castShadow = false
-    } = {}) {
+    addEmissiveLight(object,
+        {
+            color = 0xff00ff,
+            intensity = 1,
+            distance = 10,
+            castShadow = false
+        } = {}) {
         const light = new THREE.PointLight(color, intensity, distance);
 
         light.castShadow = castShadow;
