@@ -129,6 +129,23 @@ export class LightingManager {
         this.scene.add(this.lights.spotlight7, this.lights.spotlight7.target);
         this.scene.add(this.lights.spotlight8, this.lights.spotlight8.target);
 
+        // Spotlight for the "reflection" painting in the corridor
+        // Painting is on the left wall at approximately (-3, 2.5, 25)
+        this.lights.reflectionSpotlight = new THREE.SpotLight(
+            0xffffff,  // white
+            2,         // lower intensity
+            8,         // shorter distance
+            Math.PI / 8, // narrow angle
+            0.5,       // penumbra
+            2          // decay
+        );
+
+        this.lights.reflectionSpotlight.position.set(-1, 5, 25);
+        this.lights.reflectionSpotlight.target.position.set(-3, 2.5, 25);
+        this.lights.reflectionSpotlight.castShadow = false; // no shadow to avoid issues
+
+        this.scene.add(this.lights.reflectionSpotlight, this.lights.reflectionSpotlight.target);
+
         // Spotlights für room2 erstellen
         this.lights.spotlight9 = new THREE.SpotLight(new THREE.Color().setRGB(0.6, 0.0, 3.8), 3, 17.5, Math.PI, 0.5, 1);
 

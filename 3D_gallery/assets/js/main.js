@@ -9,6 +9,7 @@ import { RenderPass } from 'RenderPass';
 import { UnrealBloomPass } from 'UnrealBloomPass';
 import { Intersect } from './modules/intersect.js';
 import { AudioManager } from './modules/audio.js';
+import { PortalManager } from './modules/portal.js';
 
 
 /**
@@ -17,7 +18,8 @@ import { AudioManager } from './modules/audio.js';
 class RendererManager {
     constructor() {
         this.renderer = new THREE.WebGLRenderer({
-            antialias: GALLERY_CONFIG.RENDERER.ANTIALIAS
+            antialias: GALLERY_CONFIG.RENDERER.ANTIALIAS,
+            stencil: true  // Enable stencil buffer for portal rendering
         });
 
         this.setupRenderer();
@@ -143,6 +145,18 @@ class GalleryApp {
             this.managers.camera
         );
 
+        // Initialize portal manager
+        if (GALLERY_CONFIG.PORTAL.ENABLED) {
+            this.managers.portal = new PortalManager(
+                this.managers.renderer.getRenderer(),
+                this.managers.scene.getScene(),
+                this.managers.camera.getCamera(),
+                {
+                    recursionDepth: GALLERY_CONFIG.PORTAL.RECURSION_DEPTH,
+                    debugMode: GALLERY_CONFIG.PORTAL.DEBUG_MODE
+                }
+            );
+        }
 
         // Create local player body for first-person view
         this.createLocalPlayerBody();
@@ -165,8 +179,34 @@ class GalleryApp {
     setupEventListeners() {
         window.addEventListener('resize', () => this.handleResize());
 
+        // Keyboard shortcuts for portal toggle
+        window.addEventListener('keydown', (event) => this.handleGlobalKeyDown(event));
+
         // Update multiplayer status periodically
         setInterval(() => this.updateMultiplayerStatus(), 1000);
+    }
+
+    /**
+     * Handle global keyboard shortcuts
+     */
+    handleGlobalKeyDown(event) {
+        // Toggle portal rendering with 'P' key
+        if (event.code === 'KeyP' && this.managers.portal) {
+            this.managers.portal.setEnabled(!this.managers.portal.enabled);
+            console.log(`Portals ${this.managers.portal.enabled ? 'enabled' : 'disabled'}`);
+        }
+
+        // Adjust portal recursion depth with '[' and ']' keys
+        if (event.code === 'BracketLeft' && this.managers.portal) {
+            const newDepth = Math.max(1, this.managers.portal.recursionDepth - 1);
+            this.managers.portal.setRecursionDepth(newDepth);
+            console.log(`Portal recursion depth: ${newDepth}`);
+        }
+        if (event.code === 'BracketRight' && this.managers.portal) {
+            const newDepth = Math.min(10, this.managers.portal.recursionDepth + 1);
+            this.managers.portal.setRecursionDepth(newDepth);
+            console.log(`Portal recursion depth: ${newDepth}`);
+        }
     }
 
     /**
@@ -198,6 +238,82 @@ class GalleryApp {
         this.createFractal();
         this.doCarpet();
         this.createAudio();
+        this.createPortals();
+    }
+
+    /**
+     * Create portal pairs in the gallery
+     * Portals placed on opposite corridor walls for infinite recursion effect
+     */
+    createPortals() {
+        if (!this.managers.portal) return;
+
+        const portalConfig = GALLERY_CONFIG.PORTAL;
+        const corridorConfig = GALLERY_CONFIG.CORRIDOR;
+        const layoutConfig = GALLERY_CONFIG.LAYOUT;
+
+        // Portal A: On the RIGHT wall of the corridor, facing left (into corridor)
+        const portalAPosition = new THREE.Vector3(
+            corridorConfig.WIDTH / 2 - 0.05,  // Right wall, slightly offset inward
+            corridorConfig.WALL_HEIGHT / 2 - 1.5,    // Centered vertically, 1 unit lower
+            layoutConfig.CORRIDOR_CENTER.z     // Center of corridor
+        );
+        const portalARotation = new THREE.Euler(0, -Math.PI / 2, 0);  // Facing left (into corridor)
+
+        // Portal B: On the LEFT wall of the corridor, facing right (into corridor)
+        const portalBPosition = new THREE.Vector3(
+            -corridorConfig.WIDTH / 2 + 0.05,  // Left wall, slightly offset inward
+            corridorConfig.WALL_HEIGHT / 2 - 1.5,     // Centered vertically, 1 unit lower
+            layoutConfig.CORRIDOR_CENTER.z      // Center of corridor (same Z as portal A)
+        );
+        const portalBRotation = new THREE.Euler(0, Math.PI / 2, 0);  // Facing right (into corridor)
+
+        // Create portal meshes with frames
+        const portalAMeshes = this.managers.portal.createPortalMesh(
+            portalConfig.WIDTH,
+            portalConfig.HEIGHT,
+            portalAPosition,
+            portalARotation,
+            {
+                portalColor: portalConfig.PORTAL_COLOR_A,
+                frameColor: portalConfig.FRAME_COLOR,
+                frameWidth: portalConfig.FRAME_WIDTH
+            }
+        );
+
+        const portalBMeshes = this.managers.portal.createPortalMesh(
+            portalConfig.WIDTH,
+            portalConfig.HEIGHT,
+            portalBPosition,
+            portalBRotation,
+            {
+                portalColor: portalConfig.PORTAL_COLOR_B,
+                frameColor: portalConfig.FRAME_COLOR,
+                frameWidth: portalConfig.FRAME_WIDTH
+            }
+        );
+
+        // Add meshes to scene
+        this.managers.scene.add(portalAMeshes.portalMesh);
+        this.managers.scene.add(portalAMeshes.frameMesh);
+        this.managers.scene.add(portalBMeshes.portalMesh);
+        this.managers.scene.add(portalBMeshes.frameMesh);
+
+        // Create the portal pair (links them together)
+        const { portalA, portalB } = this.managers.portal.createPortalPair(
+            portalAMeshes.portalMesh,
+            portalBMeshes.portalMesh
+        );
+
+        // Store references for potential future access
+        this.portalPair = {
+            portalA,
+            portalB,
+            frameA: portalAMeshes.frameMesh,
+            frameB: portalBMeshes.frameMesh
+        };
+
+        console.log('Portals created: Blue portal on right corridor wall, Orange portal on left corridor wall (infinite recursion effect)');
     }
 
 
@@ -337,9 +453,9 @@ class GalleryApp {
         const corridorPaintings = [
             {
                 image: 'assets/images/reflection.jpg',
-                width: 4,
-                height: 3,
-                position: new THREE.Vector3(-GALLERY_CONFIG.CORRIDOR.WIDTH / 2 + 0.01, 3, GALLERY_CONFIG.LAYOUT.CORRIDOR_CENTER.z - 12.5),
+                width: 3,
+                height: 4,
+                position: new THREE.Vector3(-GALLERY_CONFIG.CORRIDOR.WIDTH / 2 + 0.01, 2.5, GALLERY_CONFIG.LAYOUT.CORRIDOR_CENTER.z - 5),
                 rotation: new THREE.Vector3(0, Math.PI / 2, 0)
             }
         ];
@@ -538,8 +654,17 @@ class GalleryApp {
     }
 
     renderScene() {
+        // Check if portal rendering is enabled and we have portals
+        const usePortalRendering = this.managers.portal &&
+            this.managers.portal.enabled &&
+            this.managers.portal.getPortals().length > 0;
 
-        if (this.composer) {
+        if (usePortalRendering) {
+            // Portal rendering handles its own scene rendering
+            // Note: Portal rendering currently bypasses the bloom composer
+            // for correct stencil buffer handling
+            this.managers.portal.render();
+        } else if (this.composer) {
             this.composer.render(); // Composer rendert jetzt mit Bloom
         } else {
             this.managers.renderer.render(

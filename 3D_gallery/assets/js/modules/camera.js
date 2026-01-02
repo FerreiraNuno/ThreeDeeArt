@@ -215,7 +215,7 @@ export class CameraManager {
         // Define bounds for the entire gallery space
         const room1Z = GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.z;
         const room2Z = GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.z;
-        
+
         // Overall gallery bounds
         const overallBounds = {
             MIN_X: -WIDTH / 2 + buffer,

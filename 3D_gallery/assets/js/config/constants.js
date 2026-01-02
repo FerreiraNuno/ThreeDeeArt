@@ -116,6 +116,19 @@ export const GALLERY_CONFIG = {
     // Animation
     ANIMATION: {
         CUBE_ROTATION_SPEED: 0.01
+    },
+
+    // Portal settings
+    PORTAL: {
+        ENABLED: true,
+        RECURSION_DEPTH: 2,          // How many levels deep to render portals
+        WIDTH: 3,                     // Default portal width
+        HEIGHT: 4,                    // Default portal height
+        FRAME_WIDTH: 0.15,            // Portal frame thickness
+        FRAME_COLOR: 0x1a1a2e,        // Dark blue-gray frame
+        PORTAL_COLOR_A: 0x00aaff,     // Blue portal
+        PORTAL_COLOR_B: 0xff6600,     // Orange portal
+        DEBUG_MODE: false             // Show debug visualizations
     }
 };
 
@@ -125,5 +138,6 @@ export const KEY_MAPPINGS = {
     BACKWARD: 'KeyS',
     LEFT: 'KeyA',
     RIGHT: 'KeyD',
-    JUMP: 'Space'
+    JUMP: 'Space',
+    TOGGLE_PORTALS: 'KeyP'  // Toggle portal rendering
 };
