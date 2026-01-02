@@ -588,102 +588,51 @@ class GalleryApp {
 
     /**
      * Create local player body for first-person view
+     * Uses the full PersonManager model for consistency with remote players
      */
     createLocalPlayerBody() {
         const personManager = this.managers.geometry.getPersonManager();
+        const cameraPos = this.managers.camera.getPosition();
 
-        // Create a simplified body that only shows legs and torso (no head since it's first-person)
-        this.localPlayerBody = this.createFirstPersonBody();
+        // Create a full person model using PersonManager
+        // Person group at Y=-0.2 puts feet on ground when camera is at Y=1.6
+        const personGroupGroundOffset = -0.2;
+        
+        this.localPlayerBody = personManager.createPerson(
+            new THREE.Vector3(cameraPos.x, personGroupGroundOffset, cameraPos.z),
+            {
+                name: 'localPlayer',
+                clothingColor: 0x4169e1, // Blue clothing
+                scale: 1
+            }
+        );
 
-        // Add to camera object so it moves with the camera
-        this.managers.camera.getControls().getObject().add(this.localPlayerBody);
+        // Hide head, hair, and eyes for first-person view (they would block the camera)
+        const bodyParts = this.localPlayerBody.bodyParts;
+        if (bodyParts) {
+            if (bodyParts.head) bodyParts.head.visible = false;
+            if (bodyParts.hair) bodyParts.hair.visible = false;
+            if (bodyParts.eyes) {
+                if (bodyParts.eyes.leftEye) bodyParts.eyes.leftEye.visible = false;
+                if (bodyParts.eyes.rightEye) bodyParts.eyes.rightEye.visible = false;
+                if (bodyParts.eyes.leftPupil) bodyParts.eyes.leftPupil.visible = false;
+                if (bodyParts.eyes.rightPupil) bodyParts.eyes.rightPupil.visible = false;
+            }
+        }
 
-        // Initialize animation state
-        this.localPlayerBody.animationState = {
-            isWalking: false,
-            walkCycle: 0,
-            lastPosition: new THREE.Vector3(),
-            previousKeys: { ...this.managers.camera.keys }
-        };
+        // Remove the person from scene (PersonManager adds it automatically)
+        // We'll manage its position manually to follow the camera
+        this.managers.scene.getScene().remove(this.localPlayerBody);
+        
+        // Remove bounding box helper for local player (not needed)
+        if (this.localPlayerBody.bboxHelper) {
+            this.managers.scene.getScene().remove(this.localPlayerBody.bboxHelper);
+        }
 
-        console.log('Local player body created for first-person view');
-    }
+        // Re-add to scene (not attached to camera, we update position manually)
+        this.managers.scene.add(this.localPlayerBody);
 
-    /**
-     * Create a simplified first-person body (legs and torso only)
-     */
-    createFirstPersonBody() {
-        const bodyGroup = new THREE.Group();
-        bodyGroup.name = 'localPlayerBody';
-
-        // Materials
-        const clothingMaterial = new THREE.MeshLambertMaterial({ color: 0x4169e1 });
-        const pantsMaterial = new THREE.MeshLambertMaterial({ color: 0x2f4f4f });
-        const shoeMaterial = new THREE.MeshLambertMaterial({ color: 0x000000 });
-
-        // Create torso (visible in first-person when looking down)
-        const torsoGeometry = new THREE.CylinderGeometry(0.12, 0.15, 0.6, 12);
-        const torso = new THREE.Mesh(torsoGeometry, clothingMaterial);
-        torso.position.set(0, -0.4, 0); // Position relative to camera
-        torso.castShadow = true;
-        torso.receiveShadow = true;
-        bodyGroup.add(torso);
-
-        // Create legs with proper pivot points for walking animation
-        const legLength = 0.7;
-        const legGeometry = new THREE.CylinderGeometry(0.06, 0.07, legLength, 8);
-
-        // Left leg container
-        const leftLegContainer = new THREE.Group();
-        leftLegContainer.position.set(-0.08, -0.7, 0); // Hip level relative to camera
-
-        const leftLeg = new THREE.Mesh(legGeometry, pantsMaterial);
-        leftLeg.position.set(0, -legLength / 2, 0);
-        leftLeg.castShadow = true;
-        leftLeg.receiveShadow = true;
-        leftLegContainer.add(leftLeg);
-
-        // Right leg container
-        const rightLegContainer = new THREE.Group();
-        rightLegContainer.position.set(0.08, -0.7, 0); // Hip level relative to camera
-
-        const rightLeg = new THREE.Mesh(legGeometry, pantsMaterial);
-        rightLeg.position.set(0, -legLength / 2, 0);
-        rightLeg.castShadow = true;
-        rightLeg.receiveShadow = true;
-        rightLegContainer.add(rightLeg);
-
-        bodyGroup.add(leftLegContainer);
-        bodyGroup.add(rightLegContainer);
-
-        // Create feet
-        const shoeGeometry = new THREE.BoxGeometry(0.12, 0.06, 0.2);
-        const footOffsetY = -legLength + 0.03;
-
-        // Left shoe
-        const leftShoe = new THREE.Mesh(shoeGeometry, shoeMaterial);
-        leftShoe.position.set(0, footOffsetY, 0.05);
-        leftShoe.castShadow = true;
-        leftShoe.receiveShadow = true;
-        leftLegContainer.add(leftShoe);
-
-        // Right shoe
-        const rightShoe = new THREE.Mesh(shoeGeometry, shoeMaterial);
-        rightShoe.position.set(0, footOffsetY, 0.05);
-        rightShoe.castShadow = true;
-        rightShoe.receiveShadow = true;
-        rightLegContainer.add(rightShoe);
-
-        // Store references for animation
-        bodyGroup.bodyParts = {
-            torso: torso,
-            leftLeg: leftLegContainer,
-            rightLeg: rightLegContainer,
-            leftShoe: leftShoe,
-            rightShoe: rightShoe
-        };
-
-        return bodyGroup;
+        console.log('Local player body created with full model (head hidden for first-person)');
     }
 
 
@@ -692,67 +641,135 @@ class GalleryApp {
      * Update local player body to follow camera movement and animate walking
      */
     updateLocalPlayerBody(deltaTime) {
-        if (!this.localPlayerBody || !this.localPlayerBody.animationState) return;
+        if (!this.localPlayerBody) return;
 
-        const animState = this.localPlayerBody.animationState;
+        const cameraPos = this.managers.camera.getPosition();
         const cameraKeys = this.managers.camera.keys;
+        const jumpState = this.managers.camera.jumpState;
+        
+        // Person group ground offset (feet on ground when camera at Y=1.6)
+        // Adjusted: camera is slightly lower (around neck level) and forward in the head
+        const personGroupGroundOffset = -0.25; // Lower the body slightly
+        const cameraHeight = 1.6;
+
+        // Get camera direction to offset body backward from camera
+        const direction = this.managers.camera.getWorldDirection();
+        const yRotation = Math.atan2(direction.x, direction.z);
+        
+        // Offset body backward from camera position (camera is in front of body)
+        const bodyOffset = 0.25; // How far behind the camera the body center is
+        const offsetX = -direction.x * bodyOffset;
+        const offsetZ = -direction.z * bodyOffset;
+
+        // Update position to follow camera with offset
+        this.localPlayerBody.position.x = cameraPos.x + offsetX;
+        this.localPlayerBody.position.z = cameraPos.z + offsetZ;
+        
+        // Calculate Y position: account for jumping
+        const jumpHeight = Math.max(0, cameraPos.y - cameraHeight);
+        this.localPlayerBody.position.y = personGroupGroundOffset + jumpHeight;
+
+        // Update rotation to match camera direction
+        this.localPlayerBody.rotation.y = yRotation;
 
         // Detect if player is moving based on key input
         const isMoving = cameraKeys.forward || cameraKeys.backward || cameraKeys.left || cameraKeys.right;
+        const isJumping = jumpState.isJumping;
+
+        // Get body parts (using PersonManager's structure)
+        const bodyParts = this.localPlayerBody.bodyParts;
+        if (!bodyParts) return;
+
+        const animState = this.localPlayerBody.animationState;
+        if (!animState) return;
 
         // Update walking animation
-        if (isMoving) {
+        if (isMoving && !isJumping) {
             animState.isWalking = true;
-            animState.walkCycle += deltaTime * 4; // Walking speed
+            animState.walkCycle += deltaTime * 8; // Faster walk cycle for more visible animation
 
-            // Animate legs
-            const legSwing = Math.sin(animState.walkCycle) * 0.3;
-            const bodyParts = this.localPlayerBody.bodyParts;
+            const legSwing = Math.sin(animState.walkCycle) * 0.5; // Larger leg swing
 
-            if (bodyParts.leftLeg) {
-                bodyParts.leftLeg.rotation.x = THREE.MathUtils.lerp(
-                    bodyParts.leftLeg.rotation.x,
+            // Animate legs (using PersonManager's leg structure)
+            if (bodyParts.legs && bodyParts.legs.leftLeg) {
+                bodyParts.legs.leftLeg.rotation.x = THREE.MathUtils.lerp(
+                    bodyParts.legs.leftLeg.rotation.x,
                     legSwing,
-                    0.15
+                    0.2
                 );
             }
 
-            if (bodyParts.rightLeg) {
-                bodyParts.rightLeg.rotation.x = THREE.MathUtils.lerp(
-                    bodyParts.rightLeg.rotation.x,
+            if (bodyParts.legs && bodyParts.legs.rightLeg) {
+                bodyParts.legs.rightLeg.rotation.x = THREE.MathUtils.lerp(
+                    bodyParts.legs.rightLeg.rotation.x,
                     -legSwing,
-                    0.15
+                    0.2
                 );
             }
 
-            // Add subtle torso sway
-            if (bodyParts.torso) {
-                const torsoSway = Math.sin(animState.walkCycle * 0.5) * 0.02;
-                bodyParts.torso.rotation.z = torsoSway;
+            // Animate arms (opposite to legs for natural walking)
+            const armSwing = Math.sin(animState.walkCycle) * 0.3;
+            if (bodyParts.arms && bodyParts.arms.leftArm) {
+                bodyParts.arms.leftArm.rotation.x = THREE.MathUtils.lerp(
+                    bodyParts.arms.leftArm.rotation.x,
+                    -armSwing,
+                    0.15
+                );
             }
-        } else {
+            if (bodyParts.arms && bodyParts.arms.rightArm) {
+                bodyParts.arms.rightArm.rotation.x = THREE.MathUtils.lerp(
+                    bodyParts.arms.rightArm.rotation.x,
+                    armSwing,
+                    0.15
+                );
+            }
+            
+            // Subtle torso sway for more natural walking
+            if (bodyParts.torso) {
+                const torsoSway = Math.sin(animState.walkCycle * 0.5) * 0.03;
+                bodyParts.torso.rotation.z = THREE.MathUtils.lerp(
+                    bodyParts.torso.rotation.z,
+                    torsoSway,
+                    0.1
+                );
+            }
+        } else if (!isJumping) {
             // Return to neutral position when not walking
             animState.isWalking = false;
             animState.walkCycle = 0;
 
-            const bodyParts = this.localPlayerBody.bodyParts;
+            if (bodyParts.legs && bodyParts.legs.leftLeg) {
+                bodyParts.legs.leftLeg.rotation.x = THREE.MathUtils.lerp(
+                    bodyParts.legs.leftLeg.rotation.x,
+                    0,
+                    0.15
+                );
+            }
 
-            if (bodyParts.leftLeg) {
-                bodyParts.leftLeg.rotation.x = THREE.MathUtils.lerp(
-                    bodyParts.leftLeg.rotation.x,
+            if (bodyParts.legs && bodyParts.legs.rightLeg) {
+                bodyParts.legs.rightLeg.rotation.x = THREE.MathUtils.lerp(
+                    bodyParts.legs.rightLeg.rotation.x,
+                    0,
+                    0.15
+                );
+            }
+
+            if (bodyParts.arms && bodyParts.arms.leftArm) {
+                bodyParts.arms.leftArm.rotation.x = THREE.MathUtils.lerp(
+                    bodyParts.arms.leftArm.rotation.x,
                     0,
                     0.1
                 );
             }
-
-            if (bodyParts.rightLeg) {
-                bodyParts.rightLeg.rotation.x = THREE.MathUtils.lerp(
-                    bodyParts.rightLeg.rotation.x,
+            if (bodyParts.arms && bodyParts.arms.rightArm) {
+                bodyParts.arms.rightArm.rotation.x = THREE.MathUtils.lerp(
+                    bodyParts.arms.rightArm.rotation.x,
                     0,
                     0.1
                 );
             }
-
+            
+            // Reset torso sway
             if (bodyParts.torso) {
                 bodyParts.torso.rotation.z = THREE.MathUtils.lerp(
                     bodyParts.torso.rotation.z,
@@ -763,24 +780,39 @@ class GalleryApp {
         }
 
         // Handle jumping animation
-        const isJumping = this.managers.camera.jumpState.isJumping;
         if (isJumping) {
-            const bodyParts = this.localPlayerBody.bodyParts;
-
             // Bring legs up during jump
-            if (bodyParts.leftLeg) {
-                bodyParts.leftLeg.rotation.x = THREE.MathUtils.lerp(
-                    bodyParts.leftLeg.rotation.x,
+            if (bodyParts.legs && bodyParts.legs.leftLeg) {
+                bodyParts.legs.leftLeg.rotation.x = THREE.MathUtils.lerp(
+                    bodyParts.legs.leftLeg.rotation.x,
                     -0.5,
                     0.2
                 );
             }
 
-            if (bodyParts.rightLeg) {
-                bodyParts.rightLeg.rotation.x = THREE.MathUtils.lerp(
-                    bodyParts.rightLeg.rotation.x,
+            if (bodyParts.legs && bodyParts.legs.rightLeg) {
+                bodyParts.legs.rightLeg.rotation.x = THREE.MathUtils.lerp(
+                    bodyParts.legs.rightLeg.rotation.x,
                     -0.5,
                     0.2
+                );
+            }
+
+            // Slight forward body lean
+            if (bodyParts.torso) {
+                bodyParts.torso.rotation.x = THREE.MathUtils.lerp(
+                    bodyParts.torso.rotation.x,
+                    0.1,
+                    0.1
+                );
+            }
+        } else {
+            // Reset torso lean
+            if (bodyParts.torso) {
+                bodyParts.torso.rotation.x = THREE.MathUtils.lerp(
+                    bodyParts.torso.rotation.x,
+                    0,
+                    0.1
                 );
             }
         }

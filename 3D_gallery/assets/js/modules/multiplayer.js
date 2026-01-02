@@ -121,14 +121,22 @@ export class MultiplayerManager {
     addRemotePlayer(playerData) {
         if (this.remotePlayers.has(playerData.id)) return;
 
-        // Calculated from person geometry: hip(0.9) + foot(-0.67) = 0.23
-        const footOffset = -0.23;
-        const initialY = playerData.position.y > 1.6 ?
-            (playerData.position.y - 1.6 + footOffset) : footOffset;
+        // Person model dimensions: head at Y=1.65, hip at Y=0.9, leg length=0.7
+        // Feet are at Y = 0.9 - 0.7 = 0.2 when person group is at Y=0
+        // To put feet on ground (Y=0), person group should be at Y=-0.2
+        // Camera is at Y=1.6 (eye level), head is at Y=1.65 relative to person group
+        // So when camera is at Y=1.6, person group should be at Y = 1.6 - 1.65 = -0.05
+        // But we want feet on ground, so person group at Y = -0.2
+        const personGroupGroundOffset = -0.2;
+        const cameraHeight = 1.6;
+        
+        // Calculate Y position: if jumping (camera above 1.6), offset accordingly
+        const jumpHeight = Math.max(0, playerData.position.y - cameraHeight);
+        const initialY = personGroupGroundOffset + jumpHeight;
 
         const groundPosition = new THREE.Vector3(
             playerData.position.x,
-            initialY, // Place feet on ground level or jumping height
+            initialY,
             playerData.position.z
         );
 
@@ -190,16 +198,18 @@ export class MultiplayerManager {
                 prop.previousPosition = prop.position.clone();
             }
 
-            // Convert camera position to ground-level player position
-            // Handle jumping by preserving Y position if player is above ground
-            // Account for person's foot offset (feet are 0.23 units above person group origin)
-            const footOffset = -0.23; // Calculated from person geometry: hip(0.9) + foot(-0.67) = 0.23
-            const targetY = movementData.position.y > 1.6 ?
-                (movementData.position.y - 1.6 + footOffset) : footOffset; // Offset by camera height and foot position
+            // Person model: feet at Y=0.2 relative to group origin
+            // To put feet on ground (Y=0), person group at Y=-0.2
+            const personGroupGroundOffset = -0.2;
+            const cameraHeight = 1.6;
+            
+            // Calculate Y position: if jumping (camera above 1.6), offset accordingly
+            const jumpHeight = Math.max(0, movementData.position.y - cameraHeight);
+            const targetY = personGroupGroundOffset + jumpHeight;
 
             const targetPosition = new THREE.Vector3(
                 movementData.position.x,
-                targetY, // Allow jumping while keeping feet on ground when not jumping
+                targetY,
                 movementData.position.z
             );
 
@@ -226,6 +236,7 @@ export class MultiplayerManager {
             prop.previousPosition.copy(targetPosition);
 
             // Handle smooth jumping animation
+            // Pass the target Y which already accounts for ground offset
             this.personManager.updateJumpingAnimation(prop, targetY);
 
             // Update rotation to match camera direction

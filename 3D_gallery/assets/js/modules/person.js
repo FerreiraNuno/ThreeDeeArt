@@ -449,7 +449,8 @@ export class PersonManager {
 
         const animState = person.animationState;
         const currentY = person.position.y;
-        const groundLevel = -0.23; // Account for foot offset so feet touch the ground
+        // Person group at Y=-0.2 puts feet on ground (Y=0)
+        const groundLevel = -0.2;
 
         // Detect if jumping (above ground level)
         animState.isJumping = targetY > groundLevel + 0.1;
