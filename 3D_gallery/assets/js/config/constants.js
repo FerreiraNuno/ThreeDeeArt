@@ -89,10 +89,10 @@ export const GALLERY_CONFIG = {
     // Materials
     MATERIALS: {
         WALL: {
-            COLOR: 0xffffff
+            COLOR: 0xf8f6f0 // Warm ivory - classic museum walls
         },
         FLOOR: {
-            COLOR: 0x8B4513 // Brown floor
+            COLOR: 0x8a8a8a // Polished light concrete - modern gallery floor
         },
         CEILING: {
             COLOR: 0xffffff // White ceiling

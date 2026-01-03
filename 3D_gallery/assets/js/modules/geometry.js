@@ -39,17 +39,13 @@ export class GeometryManager {
      * @returns {THREE.Mesh} The floor mesh
      */
     createFloor(width = GALLERY_CONFIG.ROOM.WIDTH, depth = GALLERY_CONFIG.ROOM.DEPTH, position = new THREE.Vector3(0, 0, 0), name = 'floor') {
-        const floorTexture = this.textureLoader.load(GALLERY_CONFIG.TEXTURES.FLOOR);
-
-        // Configure texture wrapping and repeat
-        floorTexture.wrapS = THREE.RepeatWrapping;
-        floorTexture.wrapT = THREE.RepeatWrapping;
-        const repeat = GALLERY_CONFIG.TEXTURE_REPEAT.FLOOR;
-        floorTexture.repeat.set(repeat.x * (width / GALLERY_CONFIG.ROOM.WIDTH), repeat.y * (depth / GALLERY_CONFIG.ROOM.DEPTH));
-
         const geometry = new THREE.PlaneGeometry(width, depth);
-        const material = new THREE.MeshLambertMaterial({
-            map: floorTexture
+        
+        // Elegant polished concrete floor - modern gallery aesthetic
+        const material = new THREE.MeshStandardMaterial({
+            color: GALLERY_CONFIG.MATERIALS.FLOOR.COLOR,
+            roughness: 0.15,
+            metalness: 0.05
         });
 
         const floor = new THREE.Mesh(geometry, material);
@@ -73,16 +69,11 @@ export class GeometryManager {
      * @returns {Object} Object containing all wall meshes
      */
     createWalls(width = GALLERY_CONFIG.ROOM.WIDTH, depth = GALLERY_CONFIG.ROOM.DEPTH, height = GALLERY_CONFIG.ROOM.WALL_HEIGHT, center = new THREE.Vector3(0, 0, 0), name = 'walls', openings = {}) {
-        const wallTexture = this.textureLoader.load(GALLERY_CONFIG.TEXTURES.WALL);
-
-        // Configure wall texture
-        wallTexture.wrapS = THREE.RepeatWrapping;
-        wallTexture.wrapT = THREE.RepeatWrapping;
-        const repeat = GALLERY_CONFIG.TEXTURE_REPEAT.WALL;
-        wallTexture.repeat.set(repeat.x, repeat.y);
-
-        const wallMaterial = new THREE.MeshLambertMaterial({
-            map: wallTexture
+        // Clean matte gallery walls - classic museum aesthetic
+        const wallMaterial = new THREE.MeshStandardMaterial({
+            color: GALLERY_CONFIG.MATERIALS.WALL.COLOR,
+            roughness: 0.9,
+            metalness: 0.0
         });
 
         const walls = {};
@@ -164,17 +155,14 @@ export class GeometryManager {
      * @returns {THREE.Mesh} The ceiling mesh
      */
     createCeiling(width = GALLERY_CONFIG.ROOM.WIDTH, depth = GALLERY_CONFIG.ROOM.DEPTH, height = GALLERY_CONFIG.ROOM.WALL_HEIGHT, position = new THREE.Vector3(0, 0, 0), name = 'ceiling') {
-        const ceilingTexture = this.textureLoader.load(GALLERY_CONFIG.TEXTURES.CEILING);
-
-        ceilingTexture.wrapS = THREE.RepeatWrapping;
-        ceilingTexture.wrapT = THREE.RepeatWrapping;
-        const repeat = GALLERY_CONFIG.TEXTURE_REPEAT.CEILING;
-        ceilingTexture.repeat.set(repeat.x * (width / GALLERY_CONFIG.ROOM.WIDTH), repeat.y * (depth / GALLERY_CONFIG.ROOM.DEPTH));
-
-        const material = new THREE.MeshLambertMaterial({
-            map: ceilingTexture
-        });
         const geometry = new THREE.PlaneGeometry(width, depth);
+        
+        // Clean white ceiling - matches gallery aesthetic
+        const material = new THREE.MeshStandardMaterial({
+            color: GALLERY_CONFIG.MATERIALS.CEILING.COLOR,
+            roughness: 0.95,
+            metalness: 0.0
+        });
 
         const ceiling = new THREE.Mesh(geometry, material);
         ceiling.rotation.x = Math.PI / 2;
@@ -308,15 +296,11 @@ export class GeometryManager {
      * @returns {Object} Object containing corridor wall meshes
      */
     createCorridorWalls(width, length, height, center, name) {
-        const wallTexture = this.textureLoader.load(GALLERY_CONFIG.TEXTURES.WALL);
-
-        wallTexture.wrapS = THREE.RepeatWrapping;
-        wallTexture.wrapT = THREE.RepeatWrapping;
-        const repeat = GALLERY_CONFIG.TEXTURE_REPEAT.WALL;
-        wallTexture.repeat.set(repeat.x * (length / GALLERY_CONFIG.ROOM.WIDTH), repeat.y);
-
-        const wallMaterial = new THREE.MeshLambertMaterial({
-            map: wallTexture
+        // Clean matte gallery walls - matches room aesthetic
+        const wallMaterial = new THREE.MeshStandardMaterial({
+            color: GALLERY_CONFIG.MATERIALS.WALL.COLOR,
+            roughness: 0.9,
+            metalness: 0.0
         });
 
         const walls = {};
