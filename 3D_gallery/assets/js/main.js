@@ -252,21 +252,21 @@ class GalleryApp {
         const corridorConfig = GALLERY_CONFIG.CORRIDOR;
         const layoutConfig = GALLERY_CONFIG.LAYOUT;
 
-        // Portal A: On the RIGHT wall of the corridor, facing left (into corridor)
+        // Portal A: On the LEFT wall of the corridor, facing right (into corridor)
         const portalAPosition = new THREE.Vector3(
-            corridorConfig.WIDTH / 2 - 0.05,  // Right wall, slightly offset inward
+            corridorConfig.WIDTH / 2 + 0.05,  // Left wall, slightly offset outward so it is not visible
             corridorConfig.WALL_HEIGHT / 2 - 1.5,    // Centered vertically, 1 unit lower
             layoutConfig.CORRIDOR_CENTER.z     // Center of corridor
         );
         const portalARotation = new THREE.Euler(0, -Math.PI / 2, 0);  // Facing left (into corridor)
 
-        // Portal B: On the LEFT wall of the corridor, facing right (into corridor)
+        // Portal B: On the RIGHT wall of the corridor, facing left (into corridor)
         const portalBPosition = new THREE.Vector3(
-            -corridorConfig.WIDTH / 2 + 0.05,  // Left wall, slightly offset inward
+            -corridorConfig.WIDTH / 2 + 0.05,  // Right wall, slightly offset inward
             corridorConfig.WALL_HEIGHT / 2 - 1.5,     // Centered vertically, 1 unit lower
             layoutConfig.CORRIDOR_CENTER.z      // Center of corridor (same Z as portal A)
         );
-        const portalBRotation = new THREE.Euler(0, Math.PI / 2, 0);  // Facing right (into corridor)
+        const portalBRotation = new THREE.Euler(0, Math.PI / 2, 0);  // Facing left (into corridor)
 
         // Create portal meshes with frames
         const portalAMeshes = this.managers.portal.createPortalMesh(
