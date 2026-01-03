@@ -408,7 +408,7 @@ export class GeometryManager {
     //hier auch BBox
     createCube() {
         const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = createGlowMaterial(0xff00ff, 1.5);     //Glow-Effekt noch komisch
+        const material = createGlowMaterial(0xff00ff, 1.5);     
         const cube = new THREE.Mesh(geometry, material);
         cube.position.set(0, -9, 5); // Center of room, sitting properly on floor
         cube.castShadow = true;
@@ -432,15 +432,6 @@ export class GeometryManager {
             }
         );
 
-        /*
-        // Funktion, die Shader-Uniforms jedes Frame updatet
-        cube.updateLightUniforms = () => {
-            material.uniforms.pointLightPosition.value = cube.position;
-            material.uniforms.pointLightColor.value = cube.color;
-            material.uniforms.pointLightIntensity.value = cube.intensity;
-        };
-        */
-
         return cube;
     }
 
@@ -454,24 +445,7 @@ export class GeometryManager {
         }
     }
 
-    /*
-    createPainting(imageURL, width, height, position, rotation) {
-        const textureLoader = new THREE.TextureLoader();
-        const paintingTexture = textureLoader.load(imageURL);
-        const paintingMaterial = new THREE.MeshLambertMaterial({
-            map: paintingTexture,
-        });
-        const paintingGeometry = new THREE.PlaneGeometry(width, height);
-        const painting = new THREE.Mesh(paintingGeometry, paintingMaterial);
-        painting.position.set(position.x, position.y, position.z);
-        painting.rotation.set(rotation.x, rotation.y, rotation.z);
-        this.scene.add(painting);
-        this.objects[imageURL] = painting;
-        return painting;
-    }
-    */
-
-    
+     
     createPainting(imageURL, width, height, position, rotation) { 
     const textureLoader = new THREE.TextureLoader(); 
     const paintingTexture = textureLoader.load(imageURL); 
@@ -499,7 +473,7 @@ export class GeometryManager {
 
             float glow = smoothstep(0.35, 0.5, dist);
             vec3 glowColor = vec3(1.0, 0.9, 0.6);
-            gl_FragColor.rgb += glow * 0.1 * glowColor;
+            gl_FragColor.rgb += glow * 0.05 * glowColor;
 
             #include <dithering_fragment>
             `
