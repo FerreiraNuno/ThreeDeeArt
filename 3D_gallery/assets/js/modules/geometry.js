@@ -454,6 +454,7 @@ export class GeometryManager {
         }
     }
 
+    /*
     createPainting(imageURL, width, height, position, rotation) {
         const textureLoader = new THREE.TextureLoader();
         const paintingTexture = textureLoader.load(imageURL);
@@ -468,6 +469,54 @@ export class GeometryManager {
         this.objects[imageURL] = painting;
         return painting;
     }
+    */
+
+    
+    createPainting(imageURL, width, height, position, rotation) { 
+    const textureLoader = new THREE.TextureLoader(); 
+    const paintingTexture = textureLoader.load(imageURL); 
+    const paintingMaterial = new THREE.MeshLambertMaterial({ map: paintingTexture }); 
+
+    paintingMaterial.onBeforeCompile = (shader) => { 
+        // Vertex-Shader: vUv deklarieren
+        shader.vertexShader = 'varying vec2 vUv;\n' + shader.vertexShader;
+
+        // vUv in main setzen
+        shader.vertexShader = shader.vertexShader.replace(
+            '#include <uv_vertex>',
+            '#include <uv_vertex>\n vUv = uv;'
+        );
+
+        // Fragment-Shader: vUv deklarieren
+        shader.fragmentShader = 'varying vec2 vUv;\n' + shader.fragmentShader;
+
+        // Radiale Vignette hinzufügen
+        shader.fragmentShader = shader.fragmentShader.replace(
+            '#include <dithering_fragment>',
+            `
+            vec2 center = vec2(0.5);
+            float dist = distance(vUv, center);
+
+            float glow = smoothstep(0.35, 0.5, dist);
+            vec3 glowColor = vec3(1.0, 0.9, 0.6);
+            gl_FragColor.rgb += glow * 0.1 * glowColor;
+
+            #include <dithering_fragment>
+            `
+        );
+    }; 
+    
+
+    const paintingGeometry = new THREE.PlaneGeometry(width, height); 
+    const painting = new THREE.Mesh(paintingGeometry, paintingMaterial); 
+    painting.position.set(position.x, position.y, position.z); 
+    painting.rotation.set(rotation.x, rotation.y, rotation.z); 
+    this.scene.add(painting); 
+    this.objects[imageURL] = painting; 
+    return painting; 
+}
+
+
 
     
     createDragonFractal(roomName, wallName , wallHeight = GALLERY_CONFIG.ROOM.WALL_HEIGHT, options = {}, 
