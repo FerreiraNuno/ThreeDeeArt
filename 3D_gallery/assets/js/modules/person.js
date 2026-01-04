@@ -64,11 +64,6 @@ export class PersonManager {
         // Add bounding box for collision detection
         personGroup.BBox = new THREE.Box3().setFromObject(personGroup);
 
-        // Add bounding box helper (can be removed later)
-        const bboxHelper = new THREE.Box3Helper(personGroup.BBox, 0x00ff00);
-        personGroup.bboxHelper = bboxHelper; // Store helper reference for updates
-        this.scene.add(bboxHelper);
-
         // Store the person
         this.persons[config.name] = personGroup;
         this.scene.add(personGroup);
@@ -303,17 +298,14 @@ export class PersonManager {
     }
 
     /**
-     * Update bounding box and helper for a person
+     * Update bounding box for a person
      * @param {string} name - Name of the person to update
      */
     updatePersonBoundingBox(name) {
         const person = this.persons[name];
-        if (person && person.BBox && person.bboxHelper) {
+        if (person && person.BBox) {
             // Update bounding box
             person.BBox.setFromObject(person);
-
-            // Update helper visualization
-            person.bboxHelper.box.copy(person.BBox);
         }
     }
 

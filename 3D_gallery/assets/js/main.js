@@ -260,6 +260,22 @@ class GalleryApp {
         this.doCarpet();
         this.createAudio();
         this.createPortals();
+        this.createStonePedestal();
+    }
+
+    /**
+     * Create a stone pedestal with normal mapping in Room 2
+     */
+    createStonePedestal() {
+        // Position the pedestal in Room 2 (off to the side so it doesn't block the view)
+        const room2Center = GALLERY_CONFIG.LAYOUT.ROOM2_CENTER;
+        const pedestalPosition = new THREE.Vector3(
+            room2Center.x + 8,  // Right side of room
+            0,
+            room2Center.z
+        );
+
+        this.managers.geometry.createStonePedestal(pedestalPosition);
     }
 
     /**
@@ -267,7 +283,7 @@ class GalleryApp {
      */
     createPickableCube() {
         const pickableCube = this.managers.geometry.createPickableCube();
-        
+
         // Register it with the intersect system
         this.intersect.addPickableObject(pickableCube);
     }
@@ -605,11 +621,11 @@ class GalleryApp {
      */
     updateHeldObject(deltaTime) {
         const camera = this.managers.camera.getCamera();
-        
+
         if (this.intersect) {
             // Update crosshair color feedback
             this.intersect.updateCrosshairFeedback(camera);
-            
+
             // Update held object position
             if (this.intersect.isHoldingObject()) {
                 this.intersect.updateHeldObject(camera);
@@ -753,11 +769,6 @@ class GalleryApp {
         // Remove the person from scene (PersonManager adds it automatically)
         // We'll manage its position manually to follow the camera
         this.managers.scene.getScene().remove(this.localPlayerBody);
-
-        // Remove bounding box helper for local player (not needed)
-        if (this.localPlayerBody.bboxHelper) {
-            this.managers.scene.getScene().remove(this.localPlayerBody.bboxHelper);
-        }
 
         // Re-add to scene (not attached to camera, we update position manually)
         this.managers.scene.add(this.localPlayerBody);

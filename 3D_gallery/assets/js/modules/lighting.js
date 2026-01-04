@@ -379,4 +379,47 @@ export class LightingManager {
 
         return light;
     }
+
+    /**
+     * Add a spotlight to the scene
+     * @param {THREE.Vector3} position - Position of the spotlight
+     * @param {THREE.Vector3} target - Target position the light aims at
+     * @param {Object} options - Spotlight configuration options
+     * @returns {THREE.SpotLight} The created spotlight
+     */
+    addSpotlight(position, target, options = {}) {
+        const {
+            color = 0xffffff,
+            intensity = 1,
+            distance = 20,
+            angle = Math.PI / 6,
+            penumbra = 0.3,
+            decay = 1.5,
+            castShadow = true
+        } = options;
+
+        const spotlight = new THREE.SpotLight(
+            color,
+            intensity,
+            distance,
+            angle,
+            penumbra,
+            decay
+        );
+
+        spotlight.position.copy(position);
+        spotlight.target.position.copy(target);
+
+        if (castShadow) {
+            spotlight.castShadow = true;
+            spotlight.shadow.mapSize.set(512, 512);
+            spotlight.shadow.bias = -0.001;
+            spotlight.shadow.normalBias = 0.02;
+        }
+
+        this.scene.add(spotlight);
+        this.scene.add(spotlight.target);
+
+        return spotlight;
+    }
 }

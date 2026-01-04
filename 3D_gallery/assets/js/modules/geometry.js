@@ -138,9 +138,6 @@ export class GeometryManager {
         // Add bounding boxes for collision detection
         for (const wall of Object.values(walls)) {
             wall.BBox = new THREE.Box3().setFromObject(wall);
-            // Debug helpers (can be removed later)
-            const helper = new THREE.Box3Helper(wall.BBox, 0xff0000);
-            this.scene.add(helper);
         }
         return walls;
     }
@@ -278,9 +275,6 @@ export class GeometryManager {
         // Add bounding boxes for collision detection
         for (const wall of Object.values(walls)) {
             wall.BBox = new THREE.Box3().setFromObject(wall);
-            // Debug helpers (can be removed later)
-            const helper = new THREE.Box3Helper(wall.BBox, 0xff0000);
-            this.scene.add(helper);
         }
 
         return walls;
@@ -328,9 +322,6 @@ export class GeometryManager {
         // Add bounding boxes for collision detection
         for (const wall of Object.values(walls)) {
             wall.BBox = new THREE.Box3().setFromObject(wall);
-            // Debug helpers (can be removed later)
-            const helper = new THREE.Box3Helper(wall.BBox, 0xff0000);
-            this.scene.add(helper);
         }
         return walls;
     }
@@ -586,6 +577,200 @@ export class GeometryManager {
     animateObjects(deltaTime = 0.016) {
         // Animate persons with deltaTime for smooth animations
         this.personManager.animatePersons(deltaTime);
+    }
+
+    /**
+     * Generate a procedural stone normal map texture
+     * @param {number} width - Texture width
+     * @param {number} height - Texture height
+     * @returns {THREE.CanvasTexture} The generated normal map
+     */
+    generateStoneNormalMap(width = 512, height = 512) {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        // Fill with neutral normal (pointing up: RGB 128, 128, 255)
+        ctx.fillStyle = 'rgb(128, 128, 255)';
+        ctx.fillRect(0, 0, width, height);
+
+        // Add stone-like bumps and cracks
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+
+        // Create noise-based height map first
+        const heightMap = new Float32Array(width * height);
+
+        // Generate multi-octave Perlin-like noise
+        for (let octave = 0; octave < 4; octave++) {
+            const frequency = Math.pow(2, octave) * 8;
+            const amplitude = 1 / Math.pow(2, octave);
+
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const nx = x / width * frequency;
+                    const ny = y / height * frequency;
+                    // Simple pseudo-random noise
+                    const noise = Math.sin(nx * 12.9898 + ny * 78.233) * 43758.5453;
+                    const value = (noise - Math.floor(noise)) * amplitude;
+                    heightMap[y * width + x] += value;
+                }
+            }
+        }
+
+        // Add some crack-like features
+        for (let i = 0; i < 20; i++) {
+            let cx = Math.random() * width;
+            let cy = Math.random() * height;
+            const angle = Math.random() * Math.PI * 2;
+            const length = 40 + Math.random() * 120;
+
+            for (let j = 0; j < length; j++) {
+                const px = Math.floor(cx);
+                const py = Math.floor(cy);
+                if (px >= 0 && px < width && py >= 0 && py < height) {
+                    heightMap[py * width + px] -= 0.6;  // Deeper cracks
+                    // Widen the crack more
+                    if (px > 0) heightMap[py * width + (px - 1)] -= 0.35;
+                    if (px < width - 1) heightMap[py * width + (px + 1)] -= 0.35;
+                    if (py > 0) heightMap[(py - 1) * width + px] -= 0.25;
+                    if (py < height - 1) heightMap[(py + 1) * width + px] -= 0.25;
+                }
+                cx += Math.cos(angle + (Math.random() - 0.5) * 0.5);
+                cy += Math.sin(angle + (Math.random() - 0.5) * 0.5);
+            }
+        }
+
+        // Convert height map to normal map using Sobel operator
+        for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+                // Sobel kernels for gradient
+                const tl = heightMap[(y - 1) * width + (x - 1)];
+                const t = heightMap[(y - 1) * width + x];
+                const tr = heightMap[(y - 1) * width + (x + 1)];
+                const l = heightMap[y * width + (x - 1)];
+                const r = heightMap[y * width + (x + 1)];
+                const bl = heightMap[(y + 1) * width + (x - 1)];
+                const b = heightMap[(y + 1) * width + x];
+                const br = heightMap[(y + 1) * width + (x + 1)];
+
+                // Sobel gradients
+                const dX = (tr + 2 * r + br) - (tl + 2 * l + bl);
+                const dY = (bl + 2 * b + br) - (tl + 2 * t + tr);
+
+                // Normalize and convert to RGB
+                const strength = 5.0;  // Increased for more pronounced 3D effect
+                const normalX = -dX * strength;
+                const normalY = -dY * strength;
+                const normalZ = 1.0;
+
+                const len = Math.sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ);
+
+                const idx = (y * width + x) * 4;
+                data[idx] = Math.floor(((normalX / len) * 0.5 + 0.5) * 255); // R
+                data[idx + 1] = Math.floor(((normalY / len) * 0.5 + 0.5) * 255); // G
+                data[idx + 2] = Math.floor(((normalZ / len) * 0.5 + 0.5) * 255); // B
+                data[idx + 3] = 255; // A
+            }
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+
+        return texture;
+    }
+
+    /**
+     * Create a stone pedestal with normal mapping in Room 2
+     * @param {THREE.Vector3} position - Position for the pedestal
+     * @returns {THREE.Group} The pedestal group
+     */
+    createStonePedestal(position = new THREE.Vector3(0, 0, 60)) {
+        const pedestalGroup = new THREE.Group();
+        pedestalGroup.position.copy(position);
+
+        // Load the normal map texture from file
+        const stoneNormalMap = this.textureLoader.load('assets/images/np_carpet.jpg');
+        stoneNormalMap.wrapS = THREE.RepeatWrapping;
+        stoneNormalMap.wrapT = THREE.RepeatWrapping;
+
+        // Stone material with normal mapping - polished stone look
+        const stoneMaterial = new THREE.MeshStandardMaterial({
+            color: 0x9a9a90,  // Slightly lighter gray stone
+            roughness: 0.35,  // Polished stone with some reflection
+            metalness: 0.25,  // Subtle metallic sheen
+            normalMap: stoneNormalMap,
+            normalScale: new THREE.Vector2(3.5, 3.5)  // Strong 3D effect
+        });
+
+        // Base of pedestal (wider)
+        const baseGeometry = new THREE.BoxGeometry(2, 0.4, 2);
+        const base = new THREE.Mesh(baseGeometry, stoneMaterial);
+        base.position.y = 0.2;
+        base.castShadow = true;
+        base.receiveShadow = true;
+        pedestalGroup.add(base);
+
+        // Column (middle section)
+        const columnGeometry = new THREE.CylinderGeometry(0.6, 0.7, 2.5, 16);
+        const column = new THREE.Mesh(columnGeometry, stoneMaterial);
+        column.position.y = 1.65;
+        column.castShadow = true;
+        column.receiveShadow = true;
+        pedestalGroup.add(column);
+
+        // Capital (top decorative section)
+        const capitalGeometry = new THREE.BoxGeometry(1.6, 0.3, 1.6);
+        const capital = new THREE.Mesh(capitalGeometry, stoneMaterial);
+        capital.position.y = 3.05;
+        capital.castShadow = true;
+        capital.receiveShadow = true;
+        pedestalGroup.add(capital);
+
+        // Decorative sphere on top with balanced reflective material
+        const sphereNormalMap = this.textureLoader.load('assets/images/np_carpet.jpg');
+        sphereNormalMap.wrapS = THREE.RepeatWrapping;
+        sphereNormalMap.wrapT = THREE.RepeatWrapping;
+        const sphereMaterial = new THREE.MeshStandardMaterial({
+            color: 0x3a5868,  // Dark teal
+            roughness: 0.25,  // Smooth but not mirror-like
+            metalness: 0.5,   // Moderate metallic for balanced reflections
+            normalMap: sphereNormalMap,
+            normalScale: new THREE.Vector2(4.0, 4.0)  // Strong 3D effect
+        });
+
+        const sphereGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        sphere.position.y = 3.7;
+        sphere.castShadow = true;
+        sphere.receiveShadow = true;
+        pedestalGroup.add(sphere);
+
+        // Store reference and add to scene
+        this.objects.stonePedestal = pedestalGroup;
+        this.scene.add(pedestalGroup);
+
+        // Add subtle spotlight to highlight the pedestal
+        if (this.lightingManager) {
+            this.lightingManager.addSpotlight(
+                new THREE.Vector3(position.x, 7, position.z),
+                new THREE.Vector3(position.x, 0, position.z),
+                {
+                    color: 0xfff8e7,
+                    intensity: 0.8,
+                    distance: 15,
+                    angle: Math.PI / 6,
+                    penumbra: 0.5
+                }
+            );
+        }
+
+        console.log('Stone pedestal with normal mapping created in Room 2');
+        return pedestalGroup;
     }
 }
 
