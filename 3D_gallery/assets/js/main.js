@@ -11,7 +11,6 @@ import { Intersect } from './modules/intersect.js';
 import { AudioManager } from './modules/audio.js';
 import { PortalManager } from './modules/portal.js';
 
-
 /**
  * Renderer management class
  */

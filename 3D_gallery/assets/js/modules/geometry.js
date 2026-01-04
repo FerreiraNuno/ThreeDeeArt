@@ -433,48 +433,48 @@ export class GeometryManager {
 
      
     createPainting(imageURL, width, height, position, rotation) { 
-    const textureLoader = new THREE.TextureLoader(); 
-    const paintingTexture = textureLoader.load(imageURL); 
-    const paintingMaterial = new THREE.MeshLambertMaterial({ map: paintingTexture }); 
+        const textureLoader = new THREE.TextureLoader(); 
+        const paintingTexture = textureLoader.load(imageURL); 
+        const paintingMaterial = new THREE.MeshLambertMaterial({ map: paintingTexture }); 
 
-    paintingMaterial.onBeforeCompile = (shader) => { 
-        // Vertex-Shader: vUv deklarieren
-        shader.vertexShader = 'varying vec2 vUv;\n' + shader.vertexShader;
+        paintingMaterial.onBeforeCompile = (shader) => { 
+            // Vertex-Shader: vUv deklarieren
+            shader.vertexShader = 'varying vec2 vUv;\n' + shader.vertexShader;
 
-        // vUv in main setzen
-        shader.vertexShader = shader.vertexShader.replace(
-            '#include <uv_vertex>',
-            '#include <uv_vertex>\n vUv = uv;'
-        );
+            // vUv in main setzen
+            shader.vertexShader = shader.vertexShader.replace(
+                '#include <uv_vertex>',
+                '#include <uv_vertex>\n vUv = uv;'
+            );
 
-        // Fragment-Shader: vUv deklarieren
-        shader.fragmentShader = 'varying vec2 vUv;\n' + shader.fragmentShader;
+            // Fragment-Shader: vUv deklarieren
+            shader.fragmentShader = 'varying vec2 vUv;\n' + shader.fragmentShader;
 
-        // Radiale Vignette hinzufügen
-        shader.fragmentShader = shader.fragmentShader.replace(
-            '#include <dithering_fragment>',
-            `
-            vec2 center = vec2(0.5);
-            float dist = distance(vUv, center);
+            // Radiale Vignette hinzufügen
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <dithering_fragment>',
+                `
+                vec2 center = vec2(0.5);
+                float dist = distance(vUv, center);
 
-            float glow = smoothstep(0.35, 0.5, dist);
-            vec3 glowColor = vec3(1.0, 0.9, 0.6);
-            gl_FragColor.rgb += glow * 0.05 * glowColor;
+                float glow = smoothstep(0.35, 0.5, dist);
+                vec3 glowColor = vec3(1.0, 0.9, 0.6);
+                gl_FragColor.rgb += glow * 0.05 * glowColor;
 
-            #include <dithering_fragment>
-            `
-        );
-    }; 
-    
+                #include <dithering_fragment>
+                `
+            );
+        }; 
+        
 
-    const paintingGeometry = new THREE.PlaneGeometry(width, height); 
-    const painting = new THREE.Mesh(paintingGeometry, paintingMaterial); 
-    painting.position.set(position.x, position.y, position.z); 
-    painting.rotation.set(rotation.x, rotation.y, rotation.z); 
-    this.scene.add(painting); 
-    this.objects[imageURL] = painting; 
-    return painting; 
-}
+        const paintingGeometry = new THREE.PlaneGeometry(width, height); 
+        const painting = new THREE.Mesh(paintingGeometry, paintingMaterial); 
+        painting.position.set(position.x, position.y, position.z); 
+        painting.rotation.set(rotation.x, rotation.y, rotation.z); 
+        this.scene.add(painting); 
+        this.objects[imageURL] = painting; 
+        return painting; 
+    }
 
 
 
@@ -506,17 +506,21 @@ export class GeometryManager {
         return dragon;
     }
 
-    createCarpet(roomCenter, width, depth, textureURL = null) {
+    createCarpet(roomCenter, width, depth, 
+        textureURL = '/3D_gallery/assets/images/carpet.jpg', 
+        normalMapURL = '/3D_gallery/assets/images/np_carpet.jpg') {
+
         const geometry = new THREE.PlaneGeometry(width, depth);
-        let material;
-        
-        if(textureURL){
-            const texture = new THREE.TextureLoader().load(textureURL);
-            material = new THREE.MeshLambertMaterial({ map: texture });
-        } else {
-            material = new THREE.MeshLambertMaterial({ color: 0xAA3333 });
-        }
-        
+        const textureLoader = new THREE.TextureLoader();
+
+        const map = textureLoader.load(textureURL);
+        const normalMap  = normalMapURL ? textureLoader.load(normalMapURL) : null; //lädt normalMap, wenn angegeben ist
+
+        const material = new THREE.MeshLambertMaterial({
+            map: map,
+            normalMap: normalMap
+        });
+
         const carpet = new THREE.Mesh(geometry, material);
         carpet.receiveShadow = true;
 
