@@ -22,223 +22,328 @@ export class LightingManager {
     }
 
     setupLighting() {
-        // ambient light
-        this.lights.ambient = new THREE.AmbientLight(
-            GALLERY_CONFIG.LIGHTING.AMBIENT.COLOR,
-            0.05
-        );
+        // Subtle ambient light to fill dark corners
+        this.lights.ambient = new THREE.AmbientLight(0x404040, 4);
         this.scene.add(this.lights.ambient);
 
-        // spotlights (color, intensity, distance, angle, ränder, Lichtabnahme)
-        this.lights.spotlight1 = new THREE.SpotLight(
-            GALLERY_CONFIG.LIGHTING.SPOTLIGHT.COLOR,
-            5,
-            100,
-            GALLERY_CONFIG.LIGHTING.SPOTLIGHT.ANGLE,
-            0.25,
-            0.9
-        );
+        // Spotlights für room2 erstellen (increased intensity)
+        this.lights.room2light = new THREE.SpotLight(new THREE.Color().setRGB(0.6, 0.0, 3.8), 8, 20, Math.PI, 0.5, 1);
 
-        this.lights.spotlight1.position.set(12.40, 7, 0);
-        this.lights.spotlight1.target.position.set(12.4, 0, 0);
-        this.lights.spotlight1.castShadow = true;
-        this.scene.add(this.lights.spotlight1, this.lights.spotlight1.target);
+        this.lights.room2light.position.set(0, 7.5, 57.5);
+        this.lights.room2light.target.position.set(0, 0, 57.5);
+        this.lights.room2light.castShadow = true;
 
-        this.lights.spotlight2 = new THREE.SpotLight(
-            GALLERY_CONFIG.LIGHTING.SPOTLIGHT.COLOR,
-            5,
-            100,
-            GALLERY_CONFIG.LIGHTING.SPOTLIGHT.ANGLE,
-            0.25,
-            0.9
-        );
+        this.scene.add(this.lights.room2light, this.lights.room2light.target);
 
-        this.lights.spotlight2.position.set(-12.40, 7, 3.5);
-        this.lights.spotlight2.target.position.set(-12.4, 0, 0);
-        this.lights.spotlight2.castShadow = true;
-        this.scene.add(this.lights.spotlight2, this.lights.spotlight2.target);
+        // Create modern fixture for room2 purple light
+        this.createRoom2PurpleFixture(0, 8, 57.5);
 
-        this.lights.spotlight3 = new THREE.SpotLight(
-            GALLERY_CONFIG.LIGHTING.SPOTLIGHT.COLOR,
-            5,
-            100,
-            GALLERY_CONFIG.LIGHTING.SPOTLIGHT.ANGLE,
-            0.25,
-            0.9
-        );
-
-        this.lights.spotlight3.position.set(-12.40, 7, -3.5);
-        this.lights.spotlight3.target.position.set(-12.4, 0, 0);
-        this.lights.spotlight3.castShadow = true;
-        this.scene.add(this.lights.spotlight3, this.lights.spotlight3.target);
-
-        this.lights.spotlight4 = new THREE.SpotLight(
-            GALLERY_CONFIG.LIGHTING.SPOTLIGHT.COLOR,
-            3,
-            15,
-            GALLERY_CONFIG.LIGHTING.SPOTLIGHT.ANGLE,
-            0.1,
-            0.9
-        );
-
-        this.lights.spotlight4.position.set(-14, 0, -11);
-        this.lights.spotlight4.target.position.set(0, -4, -12.49);
-        this.lights.spotlight4.castShadow = true;
-        this.scene.add(this.lights.spotlight4, this.lights.spotlight4.target);
-
-        this.lights.spotlight5 = new THREE.SpotLight(
-            GALLERY_CONFIG.LIGHTING.SPOTLIGHT.COLOR,
-            3,
-            15,
-            GALLERY_CONFIG.LIGHTING.SPOTLIGHT.ANGLE,
-            0.1,
-            0.9
-        );
-
-        this.lights.spotlight5.position.set(14, 0, -11);
-        this.lights.spotlight5.target.position.set(0, -4, -12.49);
-        this.lights.spotlight5.castShadow = true;
-        this.scene.add(this.lights.spotlight5, this.lights.spotlight5.target);
-
-        this.lights.spotlight6 = new THREE.SpotLight(
-            GALLERY_CONFIG.LIGHTING.SPOTLIGHT.COLOR,
-            3,
-            15,
-            GALLERY_CONFIG.LIGHTING.SPOTLIGHT.ANGLE,
-            0.1,
-            0.9
-        );
-
-        this.lights.spotlight6.position.set(0, -2, -11);
-        this.lights.spotlight6.target.position.set(0, 7, -12.49);
-        this.lights.spotlight6.castShadow = true;
-        this.scene.add(this.lights.spotlight6, this.lights.spotlight6.target);
-
-        // Spotlights für Corridor erstellen
-        this.lights.spotlight7 = new THREE.SpotLight(0xffffff, 5, 15, Math.PI / 2, 0.5, 1);
-        this.lights.spotlight8 = new THREE.SpotLight(0xffffff, 5, 15, Math.PI / 2, 0.5, 1);
-
-        this.lights.spotlight7.position.set(0, 10, 35);
-        this.lights.spotlight7.target.position.set(0, 0, 35);
-        this.lights.spotlight7.castShadow = true;
-
-        this.lights.spotlight8.position.set(0, 10, 15);
-        this.lights.spotlight8.target.position.set(0, 0, 15);
-        this.lights.spotlight8.castShadow = true;
-
-        this.scene.add(this.lights.spotlight7, this.lights.spotlight7.target);
-        this.scene.add(this.lights.spotlight8, this.lights.spotlight8.target);
-
-        // Spotlight for the "reflection" painting in the corridor
-        // Painting is on the left wall at approximately (-3, 2.5, 25)
-        this.lights.reflectionSpotlight = new THREE.SpotLight(
-            0xffffff,  // white
-            2,         // lower intensity
-            8,         // shorter distance
-            Math.PI / 8, // narrow angle
-            0.5,       // penumbra
-            2          // decay
-        );
-
-        this.lights.reflectionSpotlight.position.set(-1, 5, 25);
-        this.lights.reflectionSpotlight.target.position.set(-3, 2.5, 25);
-        this.lights.reflectionSpotlight.castShadow = false; // no shadow to avoid issues
-
-        this.scene.add(this.lights.reflectionSpotlight, this.lights.reflectionSpotlight.target);
-
-        // Spotlights für room2 erstellen
-        this.lights.spotlight9 = new THREE.SpotLight(new THREE.Color().setRGB(0.6, 0.0, 3.8), 3, 17.5, Math.PI, 0.5, 1);
-
-        this.lights.spotlight9.position.set(0, 8, 57.5);
-        this.lights.spotlight9.target.position.set(0, 0, 57.5);
-        this.lights.spotlight9.castShadow = true;
-
-        this.scene.add(this.lights.spotlight9, this.lights.spotlight9.target);
-
-        //für Lerp-Color
-        this.lights.corridor = [this.lights.spotlight7, this.lights.spotlight8];
         //für Lerp-Intensity
-        this.lights.room2lights = [this.lights.spotlight9]
+        this.lights.room2lights = [this.lights.room2light]
 
-        /*
-        // Directional light
-        // Lichtquelle in obere Ecke des Raumes für Beleuchtung
-     
-        this.lights.directional = new THREE.DirectionalLight(
-            GALLERY_CONFIG.LIGHTING.DIRECTIONAL.COLOR,
-            0.0
+
+
+        // Create shared materials for light fixtures
+        this.createFixtureMaterials();
+
+        // Create room ceiling lights with fixtures
+        this.createRoomCeilingLights();
+
+        // Create corridor ceiling lights
+        this.createCorridorLights();
+
+        // Create artwork spotlights
+        this.createArtworkSpotlights();
+    }
+
+    /**
+     * Create shared materials for ceiling light fixtures
+     */
+    createFixtureMaterials() {
+        // Light fixture material (visible lamp housing)
+        this.fixtureMaterial = new THREE.MeshStandardMaterial({
+            color: 0x2a2a2a,
+            roughness: 0.4,
+            metalness: 0.7
+        });
+
+        // Emissive light cover material (brighter glow)
+        this.lightCoverMaterial = new THREE.MeshStandardMaterial({
+            color: 0xfff8f0,
+            emissive: 0xfff8f0,
+            emissiveIntensity: 0.8,
+            roughness: 0.2,
+            metalness: 0.0
+        });
+    }
+
+    /**
+     * Create a ceiling light fixture with point light
+     * @param {number} x - X position
+     * @param {number} y - Y position (ceiling height)
+     * @param {number} z - Z position
+     * @param {number} intensity - Light intensity
+     * @returns {THREE.PointLight} The created point light
+     */
+    createCeilingLightFixture(x, y, z, intensity = 2.5) {
+        const ceilingHeight = y;
+        const lightY = ceilingHeight - 3;
+
+        // Create point light (warm white, strong illumination)
+        const light = new THREE.PointLight(
+            0xfff5e6,  // Warm white light
+            intensity,
+            30,        // Distance (increased for better coverage)
+            1.5        // Decay (reduced for stronger reach)
         );
+        light.position.set(x, lightY, z);
 
-        const directPos = GALLERY_CONFIG.LIGHTING.DIRECTIONAL.POSITION;
-        this.lights.directional.position.set(directPos.x, directPos.y, directPos.z);
-        this.lights.directional.castShadow = true;
+        // Enable shadow casting with soft shadows
+        light.castShadow = true;
+        light.shadow.mapSize.set(512, 512);
+        light.shadow.bias = -0.002;
+        light.shadow.normalBias = 0.02;
+        light.shadow.radius = 4;  // Soft shadow edges
+        light.shadow.camera.near = 0.1;
+        light.shadow.camera.far = 25;
 
-        // Add additional directional light from opposite direction to eliminate dark walls
-        this.lights.directional2 = new THREE.DirectionalLight(
-            0xffffff,
-            0.0
-        );
-        this.lights.directional2.position.set(-directPos.x, directPos.y, -directPos.z);
-        this.scene.add(this.lights.directional2);
-        */
+        this.scene.add(light);
 
-        //Decke heller machen
-        this.lights.ceilingDirectional = new THREE.DirectionalLight(0xffffff, 0.2);
+        // Create visible light fixture (ceiling mount)
+        const fixtureGroup = new THREE.Group();
+        fixtureGroup.position.set(x, ceilingHeight, z);
 
-        this.lights.ceilingDirectional.position.set(0, 0, 0);
-        this.lights.ceilingDirectional.target.position.set(
-            0,
-            GALLERY_CONFIG.ROOM.WALL_HEIGHT,
-            0
-        );
-        this.scene.add(this.lights.ceilingDirectional, this.lights.ceilingDirectional.target);
+        // Ceiling mount plate
+        const mountGeometry = new THREE.CylinderGeometry(0.25, 0.25, 0.04, 12);
+        const mount = new THREE.Mesh(mountGeometry, this.fixtureMaterial);
+        mount.position.y = -0.02;
+        fixtureGroup.add(mount);
 
-        // Configure shadow properties
-        const shadowConfig = GALLERY_CONFIG.SHADOWS;
-        this.lights.ceilingDirectional.shadow.mapSize.width = shadowConfig.MAP_SIZE;
-        this.lights.ceilingDirectional.shadow.mapSize.height = shadowConfig.MAP_SIZE;
-        this.lights.ceilingDirectional.shadow.camera.near = shadowConfig.CAMERA_NEAR;
-        this.lights.ceilingDirectional.shadow.camera.far = shadowConfig.CAMERA_FAR;
-        this.lights.ceilingDirectional.shadow.camera.left = shadowConfig.CAMERA_LEFT;
-        this.lights.ceilingDirectional.shadow.camera.right = shadowConfig.CAMERA_RIGHT;
-        this.lights.ceilingDirectional.shadow.camera.top = shadowConfig.CAMERA_TOP;
-        this.lights.ceilingDirectional.shadow.camera.bottom = shadowConfig.CAMERA_BOTTOM;
+        // Light fixture housing
+        const housingGeometry = new THREE.CylinderGeometry(0.18, 0.28, 0.12, 12);
+        const housing = new THREE.Mesh(housingGeometry, this.fixtureMaterial);
+        housing.position.y = -0.1;
+        fixtureGroup.add(housing);
 
-        this.scene.add(this.lights.ceilingDirectional);
+        // Light cover/diffuser (emissive - the part that glows)
+        const coverGeometry = new THREE.CylinderGeometry(0.26, 0.26, 0.06, 12);
+        const cover = new THREE.Mesh(coverGeometry, this.lightCoverMaterial);
+        cover.position.y = -0.19;
+        fixtureGroup.add(cover);
 
+        this.scene.add(fixtureGroup);
 
-        // point lights
-        // Punktlichter an der Decke verteilen
+        return light;
+    }
+
+    /**
+     * Create ceiling lights for the main room (Room 1)
+     * Adds point lights with visible lamp fixtures
+     */
+    createRoomCeilingLights() {
         this.lights.ceilingLights = [];
 
-        const ceilingHeight = GALLERY_CONFIG.ROOM.WALL_HEIGHT - 0.1; // leicht unterhalb der Decke
+        const ceilingHeight = GALLERY_CONFIG.ROOM.WALL_HEIGHT;
         const roomWidth = GALLERY_CONFIG.ROOM.WIDTH;
         const roomDepth = GALLERY_CONFIG.ROOM.DEPTH;
 
-        // Anzahl Lichter
-        const numLightsX = 3; // entlang Breite
-        const numLightsZ = 2; // entlang Tiefe
+        // Number of lights in grid
+        const numLightsX = 3;
+        const numLightsZ = 2;
 
         for (let i = 0; i < numLightsX; i++) {
             for (let j = 0; j < numLightsZ; j++) {
-                const light = new THREE.PointLight(
-                    GALLERY_CONFIG.LIGHTING.POINT.COLOR,
-                    1,
-                    GALLERY_CONFIG.LIGHTING.POINT.DISTANCE,
-                    1
-                );
-
-                // Position gleichmäßig verteilen
+                // Position evenly distributed
                 const x = -roomWidth / 2 + (i + 0.5) * (roomWidth / numLightsX);
                 const z = -roomDepth / 2 + (j + 0.5) * (roomDepth / numLightsZ);
-                light.position.set(x, ceilingHeight, z);
 
-                light.castShadow = true;
-
-                this.scene.add(light);
+                const light = this.createCeilingLightFixture(x, ceilingHeight, z, 6);
                 this.lights.ceilingLights.push(light);
             }
         }
+    }
+
+    /**
+     * Create ceiling lights for the corridor
+     * Adds point lights with visible lamp fixtures along the corridor
+     */
+    createCorridorLights() {
+        this.lights.corridorLights = [];
+
+        const corridorHeight = GALLERY_CONFIG.CORRIDOR.WALL_HEIGHT;
+        const layoutConfig = GALLERY_CONFIG.LAYOUT;
+
+        // Corridor runs from Room 1 front to Room 2 back
+        const roomDepth = GALLERY_CONFIG.ROOM.DEPTH;
+        const corridorStartZ = roomDepth / 2;  // 12.5
+        const corridorEndZ = layoutConfig.ROOM2_CENTER.z - roomDepth / 2;  // 47.5
+        const corridorLength = corridorEndZ - corridorStartZ;  // 35
+
+        // Number of lights along the corridor
+        const numLights = 4;
+        const lightSpacing = corridorLength / (numLights + 1);
+
+        for (let i = 0; i < numLights; i++) {
+            const zPos = corridorStartZ + lightSpacing * (i + 1);
+
+            const light = this.createCeilingLightFixture(0, corridorHeight, zPos, 2.5);
+            this.lights.corridorLights.push(light);
+        }
+    }
+
+    /**
+     * Create focused spotlights for artwork illumination
+     * Classic museum-style lighting that highlights each painting
+     */
+    createArtworkSpotlights() {
+        this.lights.artworkSpotlights = [];
+
+        const ceilingHeight = GALLERY_CONFIG.ROOM.WALL_HEIGHT;
+        const room1Z = GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.z;  // 0
+        const corridorZ = GALLERY_CONFIG.LAYOUT.CORRIDOR_CENTER.z;  // 30
+
+        // Artwork spotlight configurations
+        // Each spotlight is positioned above and in front of the painting, aimed at it
+        const artworkConfigs = [
+            // Left wall - vanGogh.jpg at (-12.49, 4, 0)
+            {
+                position: { x: -9, y: ceilingHeight - 0.5, z: room1Z },
+                target: { x: -12.49, y: 4, z: room1Z }
+            },
+            // Right wall - vanGogh2.jpg at (12.49, 4, 0)
+            {
+                position: { x: 9, y: ceilingHeight - 0.5, z: room1Z },
+                target: { x: 12.49, y: 4, z: room1Z }
+            },
+            // Back wall center - claudeMonet.jpg at (0, 4, -12.49)
+            {
+                position: { x: 0, y: ceilingHeight - 0.5, z: -9 },
+                target: { x: 0, y: 4, z: -12.49 }
+            },
+            // Back wall left - claudeMonet2.jpg at (-8, 4, -12.49)
+            {
+                position: { x: -8, y: ceilingHeight - 0.5, z: -9 },
+                target: { x: -8, y: 4, z: -12.49 }
+            },
+            // Back wall right - claudeMonet3.jpg at (8, 4, -12.49)
+            {
+                position: { x: 8, y: ceilingHeight - 0.5, z: -9 },
+                target: { x: 8, y: 4, z: -12.49 }
+            },
+            // Corridor painting - reflection.jpg at (-2.99, 2.5, 25)
+            {
+                position: { x: 0, y: ceilingHeight - 0.5, z: corridorZ - 5 },
+                target: { x: -GALLERY_CONFIG.CORRIDOR.WIDTH / 2 + 0.01, y: 2.5, z: corridorZ - 5 }
+            }
+        ];
+
+        artworkConfigs.forEach((config, index) => {
+            const spotlight = this.createArtworkSpotlight(
+                config.position,
+                config.target
+            );
+            this.lights.artworkSpotlights.push(spotlight);
+        });
+    }
+
+    /**
+     * Create a single artwork spotlight
+     * @param {Object} position - {x, y, z} spotlight position
+     * @param {Object} target - {x, y, z} target position (artwork center)
+     * @returns {THREE.SpotLight} The created spotlight
+     */
+    createArtworkSpotlight(position, target) {
+        // Warm white spotlight for artwork - museum quality lighting
+        const spotlight = new THREE.SpotLight(
+            0xfff8e8,   // Warm white (slightly warmer than ceiling lights)
+            3,          // Intensity
+            20,         // Distance
+            Math.PI / 8, // Narrow angle for focused beam
+            0.4,        // Penumbra (soft edges)
+            1.5         // Decay
+        );
+
+        spotlight.position.set(position.x, position.y, position.z);
+        spotlight.target.position.set(target.x, target.y, target.z);
+
+        // Soft shadows for artwork lighting
+        spotlight.castShadow = false;  // Artwork spotlights don't need shadows
+
+        this.scene.add(spotlight);
+        this.scene.add(spotlight.target);
+
+        return spotlight;
+    }
+
+    /**
+     * Create a modern pendant light fixture for room 2 purple light
+     * Sleek cylindrical design with glowing purple core
+     * @param {number} x - X position
+     * @param {number} y - Y position (ceiling height)
+     * @param {number} z - Z position
+     */
+    createRoom2PurpleFixture(x, y, z) {
+        const fixtureGroup = new THREE.Group();
+        fixtureGroup.position.set(x, y, z);
+
+        // Matte black fixture materials
+        const blackMetal = new THREE.MeshStandardMaterial({
+            color: 0x1a1a1a,
+            roughness: 0.3,
+            metalness: 0.9
+        });
+
+        // Ceiling mount - slim rectangular plate
+        const mountGeometry = new THREE.BoxGeometry(0.6, 0.05, 0.6);
+        const mount = new THREE.Mesh(mountGeometry, blackMetal);
+        mount.position.y = -0.025;
+        fixtureGroup.add(mount);
+
+        // Suspension rod
+        const rodGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8);
+        const rod = new THREE.Mesh(rodGeometry, blackMetal);
+        rod.position.y = -0.2;
+        fixtureGroup.add(rod);
+
+        // Main housing - sleek cylinder
+        const housingGeometry = new THREE.CylinderGeometry(0.25, 0.25, 0.15, 16);
+        const housing = new THREE.Mesh(housingGeometry, blackMetal);
+        housing.position.y = -0.42;
+        fixtureGroup.add(housing);
+
+        // Inner ring accent
+        const ringGeometry = new THREE.TorusGeometry(0.2, 0.02, 8, 24);
+        const ring = new THREE.Mesh(ringGeometry, blackMetal);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = -0.5;
+        fixtureGroup.add(ring);
+
+        // Glowing purple core - the visible light source
+        const purpleGlowMaterial = new THREE.MeshStandardMaterial({
+            color: 0xaa00ff,
+            emissive: 0xaa00ff,
+            emissiveIntensity: 2.5,
+            roughness: 0.1,
+            metalness: 0.0
+        });
+
+        // Main glowing element - lens/diffuser
+        const lensGeometry = new THREE.CylinderGeometry(0.18, 0.22, 0.08, 16);
+        const lens = new THREE.Mesh(lensGeometry, purpleGlowMaterial);
+        lens.position.y = -0.52;
+        fixtureGroup.add(lens);
+
+        // Inner glow sphere for depth
+        const innerGlowGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+        const innerGlow = new THREE.Mesh(innerGlowGeometry, purpleGlowMaterial);
+        innerGlow.position.y = -0.48;
+        fixtureGroup.add(innerGlow);
+
+        this.scene.add(fixtureGroup);
+        this.objects = this.objects || {};
+        this.objects.room2PurpleFixture = fixtureGroup;
+
+        return fixtureGroup;
     }
 
     getLights() {

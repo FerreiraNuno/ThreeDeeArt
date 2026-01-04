@@ -496,52 +496,7 @@ class GalleryApp {
         this.carpet3.rotation.z = Math.PI / 2;
     }
 
-    updateCorridorLights(deltaTime) {
-        const corridor = this.managers.lighting.lights.corridor;
 
-        // Initialisierung der Ziel-Farben beim ersten Aufruf
-        if (!this.spotTargetColors || this.spotTargetColors.length === 0) {
-            this.spotTargetColors = corridor.map(spot => spot.color.clone());
-            this.colorLerpFactor = 0;
-            // Setze auch Startfarben als aktuelle Farben
-            this.spotStartColors = corridor.map(spot => spot.color.clone());
-        }
-
-        this.colorLerpFactor += deltaTime * 0.5; // Geschwindigkeit anpassen
-
-        corridor.forEach((spot, i) => {
-            // Lerp zwischen Start- und Ziel-Farbe
-            spot.color.copy(this.spotStartColors[i]).lerp(this.spotTargetColors[i], this.colorLerpFactor);
-        });
-
-        if (this.colorLerpFactor >= 1) {
-            // Wenn Lerp abgeschlossen, neue Ziel-Farben wählen
-            this.spotStartColors = corridor.map(spot => spot.color.clone());
-            this.spotTargetColors = corridor.map(() => new THREE.Color(Math.random(), Math.random(), Math.random()));
-            this.colorLerpFactor = 0;
-        }
-    }
-
-    updateCorridorLightIntensity(deltaTime) {
-        const room2lights = this.managers.lighting.lights.room2lights;
-        if (!room2lights || room2lights.length === 0) return;
-
-        if (this.intensityTime === undefined) {
-            this.intensityTime = 0;
-        }
-
-        this.intensityTime += deltaTime * 1.2;
-
-        const min = 0.5;
-        const max = 5;
-
-        const t = (Math.sin(this.intensityTime * 0.8) + 1) / 2;
-        const intensity = THREE.MathUtils.lerp(min, max, t);
-
-        room2lights.forEach(spot => {
-            spot.intensity = intensity;
-        });
-    }
 
     //Problem: spielt Musik im Rendering
     async createAudio() {
@@ -609,8 +564,6 @@ class GalleryApp {
         this.updateScene(deltaTime, currentTime);
         this.updateFractal(deltaTime);
         this.managers.geometry.animateCube(deltaTime);
-        this.updateCorridorLights(deltaTime);
-        this.updateCorridorLightIntensity(deltaTime);
         this.renderScene();
     }
 
@@ -709,6 +662,7 @@ class GalleryApp {
     /**
      * Create local player body for first-person view
      * Uses the full PersonManager model for consistency with remote players
+     * Head is visible from external views (portals) but not from first-person using layers
      */
     createLocalPlayerBody() {
         const personManager = this.managers.geometry.getPersonManager();
@@ -727,16 +681,28 @@ class GalleryApp {
             }
         );
 
-        // Hide head, hair, and eyes for first-person view (they would block the camera)
+        // Use layer 1 for head parts - visible from external views (portals) but not first-person
+        // Layer 0 = default (main camera sees this)
+        // Layer 1 = external view only (portal camera sees this, main camera doesn't)
+        const EXTERNAL_VIEW_LAYER = 1;
+
+        // Configure main camera to NOT see layer 1 (head parts)
+        this.managers.camera.getCamera().layers.disable(EXTERNAL_VIEW_LAYER);
+
+        // Move head, hair, and eyes to layer 1 (external view only)
         const bodyParts = this.localPlayerBody.bodyParts;
         if (bodyParts) {
-            if (bodyParts.head) bodyParts.head.visible = false;
-            if (bodyParts.hair) bodyParts.hair.visible = false;
+            if (bodyParts.head) {
+                bodyParts.head.layers.set(EXTERNAL_VIEW_LAYER);
+            }
+            if (bodyParts.hair) {
+                bodyParts.hair.layers.set(EXTERNAL_VIEW_LAYER);
+            }
             if (bodyParts.eyes) {
-                if (bodyParts.eyes.leftEye) bodyParts.eyes.leftEye.visible = false;
-                if (bodyParts.eyes.rightEye) bodyParts.eyes.rightEye.visible = false;
-                if (bodyParts.eyes.leftPupil) bodyParts.eyes.leftPupil.visible = false;
-                if (bodyParts.eyes.rightPupil) bodyParts.eyes.rightPupil.visible = false;
+                if (bodyParts.eyes.leftEye) bodyParts.eyes.leftEye.layers.set(EXTERNAL_VIEW_LAYER);
+                if (bodyParts.eyes.rightEye) bodyParts.eyes.rightEye.layers.set(EXTERNAL_VIEW_LAYER);
+                if (bodyParts.eyes.leftPupil) bodyParts.eyes.leftPupil.layers.set(EXTERNAL_VIEW_LAYER);
+                if (bodyParts.eyes.rightPupil) bodyParts.eyes.rightPupil.layers.set(EXTERNAL_VIEW_LAYER);
             }
         }
 
@@ -752,7 +718,7 @@ class GalleryApp {
         // Re-add to scene (not attached to camera, we update position manually)
         this.managers.scene.add(this.localPlayerBody);
 
-        console.log('Local player body created with full model (head hidden for first-person)');
+        console.log('Local player body created with full model (head on layer 1 - visible from portals only)');
     }
 
 

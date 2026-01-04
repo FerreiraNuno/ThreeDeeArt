@@ -95,7 +95,7 @@ export const GALLERY_CONFIG = {
             COLOR: 0x8a8a8a // Polished light concrete - modern gallery floor
         },
         CEILING: {
-            COLOR: 0xffffff // White ceiling
+            COLOR: 0xf8f6f0 // Warm ivory - matches walls
         },
         CUBE: {
             COLOR: 0xff6b6b // Red cube
