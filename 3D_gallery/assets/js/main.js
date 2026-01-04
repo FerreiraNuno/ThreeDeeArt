@@ -669,15 +669,16 @@ class GalleryApp {
         const cameraPos = this.managers.camera.getPosition();
 
         // Create a full person model using PersonManager
-        // Person group at Y=-0.2 puts feet on ground when camera is at Y=1.6
-        const personGroupGroundOffset = -0.2;
+        // Person group offset adjusted for scale 1.15 (taller player)
+        const playerScale = 1.15;
+        const personGroupGroundOffset = -0.23 * playerScale;
 
         this.localPlayerBody = personManager.createPerson(
             new THREE.Vector3(cameraPos.x, personGroupGroundOffset, cameraPos.z),
             {
                 name: 'localPlayer',
                 clothingColor: 0x4169e1, // Blue clothing
-                scale: 1
+                scale: playerScale
             }
         );
 
@@ -734,18 +735,20 @@ class GalleryApp {
         const jumpState = this.managers.camera.jumpState;
 
         // Person group ground offset (feet on ground when camera at Y=1.6)
-        // Adjusted: camera is slightly lower (around neck level) and forward in the head
-        const personGroupGroundOffset = -0.25; // Lower the body slightly
-        const cameraHeight = 1.6;
+        // Adjusted for taller player (scale 1.15)
+        const playerScale = 1.15;
+        const personGroupGroundOffset = -0.2 * playerScale; // -0.23
+        const cameraHeight = 1.7;
 
         // Get camera direction to offset body backward from camera
         const direction = this.managers.camera.getWorldDirection();
         const yRotation = Math.atan2(direction.x, direction.z);
 
         // Offset body backward from camera position (camera is in front of body)
+        // Use yRotation instead of direction vector so offset is independent of vertical look angle
         const bodyOffset = 0.25; // How far behind the camera the body center is
-        const offsetX = -direction.x * bodyOffset;
-        const offsetZ = -direction.z * bodyOffset;
+        const offsetX = -Math.sin(yRotation) * bodyOffset;
+        const offsetZ = -Math.cos(yRotation) * bodyOffset;
 
         // Update position to follow camera with offset
         this.localPlayerBody.position.x = cameraPos.x + offsetX;

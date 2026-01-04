@@ -27,14 +27,14 @@ export const GALLERY_CONFIG = {
         NEAR: 0.1,
         FAR: 1000,
         INITIAL_Z: 3,
-        INITIAL_Y: 1.6, // Eye level height
+        INITIAL_Y: 2, // Eye level height (raised for taller players)
         MOVE_SPEED: 10,
         // Collision boundary buffer from walls
         BOUNDARY_BUFFER: 0.5,
         // Jump physics
         JUMP_VELOCITY: 8,
         GRAVITY: -25,
-        GROUND_LEVEL: 1.6
+        GROUND_LEVEL: 1.7
     },
 
     // Lighting

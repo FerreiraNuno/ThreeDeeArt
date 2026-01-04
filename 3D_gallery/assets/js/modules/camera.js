@@ -20,6 +20,12 @@ export class CameraManager {
         // Setup pointer lock controls
         this.controls = new PointerLockControls(this.camera, document.body);
 
+        // Limit vertical look angle to prevent gimbal lock issues
+        // Polar angle: 0 = up, π/2 = horizontal, π = down
+        // Limit to 89° from horizontal (1° from straight up/down)
+        this.controls.minPolarAngle = Math.PI / 180; // 1° from straight up
+        this.controls.maxPolarAngle = Math.PI - (Math.PI / 180); // 1° from straight down
+
         // Smooth keyboard movement state
         this.keys = {
             forward: false,

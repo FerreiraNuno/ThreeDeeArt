@@ -103,27 +103,27 @@ export class PersonManager {
 
         // Left eye (from person's perspective) - positioned lower on face
         const leftEye = new THREE.Mesh(eyeGeometry, eyeWhiteMaterial);
-        leftEye.position.set(-0.04 * scale, 1.62 * scale, 0.14 * scale); // Lower Y position
+        leftEye.position.set(-0.04 * scale, 1.62 * scale, 0.13 * scale); // Lower Y position
         leftEye.castShadow = true;
         leftEye.receiveShadow = true;
         personGroup.add(leftEye);
 
         // Left pupil
         const leftPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
-        leftPupil.position.set(-0.04 * scale, 1.62 * scale, 0.155 * scale); // Lower Y position
+        leftPupil.position.set(-0.04 * scale, 1.62 * scale, 0.15 * scale); // Lower Y position
         leftPupil.castShadow = true;
         personGroup.add(leftPupil);
 
         // Right eye (from person's perspective) - positioned lower on face
         const rightEye = new THREE.Mesh(eyeGeometry, eyeWhiteMaterial);
-        rightEye.position.set(0.04 * scale, 1.62 * scale, 0.14 * scale); // Lower Y position
+        rightEye.position.set(0.04 * scale, 1.62 * scale, 0.13 * scale); // Lower Y position
         rightEye.castShadow = true;
         rightEye.receiveShadow = true;
         personGroup.add(rightEye);
 
         // Right pupil
         const rightPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
-        rightPupil.position.set(0.04 * scale, 1.62 * scale, 0.155 * scale); // Lower Y position
+        rightPupil.position.set(0.04 * scale, 1.62 * scale, 0.15 * scale); // Lower Y position
         rightPupil.castShadow = true;
         personGroup.add(rightPupil);
 
@@ -449,8 +449,8 @@ export class PersonManager {
 
         const animState = person.animationState;
         const currentY = person.position.y;
-        // Person group at Y=-0.2 puts feet on ground (Y=0)
-        const groundLevel = -0.2;
+        // Person group ground level adjusted for taller players (scale 1.15)
+        const groundLevel = -0.23;
 
         // Detect if jumping (above ground level)
         animState.isJumping = targetY > groundLevel + 0.1;

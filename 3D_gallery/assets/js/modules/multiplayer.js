@@ -121,15 +121,11 @@ export class MultiplayerManager {
     addRemotePlayer(playerData) {
         if (this.remotePlayers.has(playerData.id)) return;
 
-        // Person model dimensions: head at Y=1.65, hip at Y=0.9, leg length=0.7
-        // Feet are at Y = 0.9 - 0.7 = 0.2 when person group is at Y=0
-        // To put feet on ground (Y=0), person group should be at Y=-0.2
-        // Camera is at Y=1.6 (eye level), head is at Y=1.65 relative to person group
-        // So when camera is at Y=1.6, person group should be at Y = 1.6 - 1.65 = -0.05
-        // But we want feet on ground, so person group at Y = -0.2
-        const personGroupGroundOffset = -0.2;
-        const cameraHeight = 1.6;
-        
+        // Person model dimensions adjusted for taller players (scale 1.15)
+        const playerScale = 1.15;
+        const personGroupGroundOffset = -0.2 * playerScale;
+        const cameraHeight = 1.7;
+
         // Calculate Y position: if jumping (camera above 1.6), offset accordingly
         const jumpHeight = Math.max(0, playerData.position.y - cameraHeight);
         const initialY = personGroupGroundOffset + jumpHeight;
@@ -145,7 +141,7 @@ export class MultiplayerManager {
             {
                 name: `remote_${playerData.id}`,
                 clothingColor: playerData.color || 0x4169e1,
-                scale: 1
+                scale: playerScale
             }
         );
 
@@ -198,11 +194,11 @@ export class MultiplayerManager {
                 prop.previousPosition = prop.position.clone();
             }
 
-            // Person model: feet at Y=0.2 relative to group origin
-            // To put feet on ground (Y=0), person group at Y=-0.2
-            const personGroupGroundOffset = -0.2;
-            const cameraHeight = 1.6;
-            
+            // Person model adjusted for taller players (scale 1.15)
+            const playerScale = 1.15;
+            const personGroupGroundOffset = -0.2 * playerScale;
+            const cameraHeight = 1.7;
+
             // Calculate Y position: if jumping (camera above 1.6), offset accordingly
             const jumpHeight = Math.max(0, movementData.position.y - cameraHeight);
             const targetY = personGroupGroundOffset + jumpHeight;
