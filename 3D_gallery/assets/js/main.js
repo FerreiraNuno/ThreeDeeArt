@@ -544,9 +544,6 @@ class GalleryApp {
         this.carpet3.rotation.z = Math.PI / 2;
     }
 
-
-
-    //Problem: spielt Musik im Rendering
     async createAudio() {
         const textureLoader = new THREE.TextureLoader();
 

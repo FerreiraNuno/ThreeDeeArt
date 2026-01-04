@@ -16,20 +16,32 @@ A modular 3D gallery application built with Three.js, featuring a clean architec
 │   ├── js/
 │   │   ├── main.js         # Main application orchestrator
 │   │   ├── modules/
-│   │   │   ├── scene.js    # Scene management
-│   │   │   ├── camera.js   # Camera controls and management
-│   │   │   ├── lighting.js # Lighting setup and management
-│   │   │   ├── geometry.js # 3D objects and geometry creation
-│   │   │   ├── controls.js # User input and camera controls
-│   │   │   └── renderer.js # WebGL renderer management
+│   │   │   ├── audio.js             # Audio Management
+│   │   │   ├── camera.js            # Camera controls and Management
+│   │   │   ├── fractal.js           # calculations for fractal object
+│   │   │   ├── fractalGeometry.js   # object and geometry creation for fractal
+│   │   │   ├── geometry.js          # 3D objects and geometry creation
+│   │   │   ├── glowMaterial.js      # customized Material for Bloom
+│   │   │   ├── glowShader.js        # customized Shader for Bloom
+│   │   │   ├── intersect.js         # selection and picking
+│   │   │   ├── lighting.js          # Lighting setup and management
+│   │   │   ├── multiplayer.js       # 
+│   │   │   ├── person.js            # 
+│   │   │   ├── portal.js            # 
+│   │   │   ├── shader.js            # simple vertex- and fragment shader
 │   │   └── config/
 │   │       └── constants.js # Configuration constants
 │   └── images/
-│       ├── floor.jpg       # Floor texture
-│       ├── vanGogh.jpg     # Artwork texture
-│       ├── wall1.jpg       # Wall texture variant 1
-│       └── wall2.jpg       # Wall texture variant 2
-└── README.md               # This file
+│       ├── box.jpg             # musicbox texture
+│       ├── floor.jpg           # Floor texture
+│       ├── vanGogh.jpg         # Artwork texture
+│       ├── vanGogh2.jpg        # Artwork texture
+│       ├── claudeMonet.jpg     # Artwork texture
+│       ├── claudeMonet2.jpg    # Artwork texture
+│       ├── claudeMonet3.jpg    # Artwork texture
+│       ├── reflection.jpg      # Artwork texture
+│       ├── np_carpet.jpg       # NormalMap 
+└── README.md                   # This file
 ```
 
 ## Architecture Overview
