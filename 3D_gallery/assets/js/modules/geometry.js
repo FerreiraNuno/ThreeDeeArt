@@ -22,7 +22,7 @@ export class GeometryManager {
 
     // Setter, um den LightingManager zu verknüpfen
     setLightingManager(lightingManager) {
-        this.lightingManager  = lightingManager;
+        this.lightingManager = lightingManager;
     }
 
     // Getter
@@ -40,7 +40,7 @@ export class GeometryManager {
      */
     createFloor(width = GALLERY_CONFIG.ROOM.WIDTH, depth = GALLERY_CONFIG.ROOM.DEPTH, position = new THREE.Vector3(0, 0, 0), name = 'floor') {
         const geometry = new THREE.PlaneGeometry(width, depth);
-        
+
         // Elegant polished concrete floor - modern gallery aesthetic
         const material = new THREE.MeshStandardMaterial({
             color: GALLERY_CONFIG.MATERIALS.FLOOR.COLOR,
@@ -156,7 +156,7 @@ export class GeometryManager {
      */
     createCeiling(width = GALLERY_CONFIG.ROOM.WIDTH, depth = GALLERY_CONFIG.ROOM.DEPTH, height = GALLERY_CONFIG.ROOM.WALL_HEIGHT, position = new THREE.Vector3(0, 0, 0), name = 'ceiling') {
         const geometry = new THREE.PlaneGeometry(width, depth);
-        
+
         // Clean white ceiling - matches gallery aesthetic
         const material = new THREE.MeshStandardMaterial({
             color: GALLERY_CONFIG.MATERIALS.CEILING.COLOR,
@@ -392,7 +392,7 @@ export class GeometryManager {
     //hier auch BBox
     createCube() {
         const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = createGlowMaterial(0xff00ff, 1.5);     
+        const material = createGlowMaterial(0xff00ff, 1.5);
         const cube = new THREE.Mesh(geometry, material);
         cube.position.set(0, -9, 5); // Center of room, sitting properly on floor
         cube.castShadow = true;
@@ -406,22 +406,22 @@ export class GeometryManager {
         this.objects.cube = cube;
         this.rooms['room2'].floor.add(cube);
 
-        
+
         this.lightingManager.addEmissiveLight
-        (
-            cube,
-            {
-            color: 0xff00ff,
-            intensity: 1.2,
-            distance: 12
-            }
-        );
-        
+            (
+                cube,
+                {
+                    color: 0xff00ff,
+                    intensity: 1.2,
+                    distance: 12
+                }
+            );
+
 
         return cube;
     }
 
-    animateCube(deltaTime){
+    animateCube(deltaTime) {
         if (this.objects.cube) {
             const speed = GALLERY_CONFIG.ANIMATION.CUBE_ROTATION_SPEED;
             //this.objects.cube.rotation.y += speed;
@@ -431,13 +431,13 @@ export class GeometryManager {
         }
     }
 
-     
-    createPainting(imageURL, width, height, position, rotation) { 
-        const textureLoader = new THREE.TextureLoader(); 
-        const paintingTexture = textureLoader.load(imageURL); 
-        const paintingMaterial = new THREE.MeshLambertMaterial({ map: paintingTexture }); 
 
-        paintingMaterial.onBeforeCompile = (shader) => { 
+    createPainting(imageURL, width, height, position, rotation) {
+        const textureLoader = new THREE.TextureLoader();
+        const paintingTexture = textureLoader.load(imageURL);
+        const paintingMaterial = new THREE.MeshLambertMaterial({ map: paintingTexture });
+
+        paintingMaterial.onBeforeCompile = (shader) => {
             // Vertex-Shader: vUv deklarieren
             shader.vertexShader = 'varying vec2 vUv;\n' + shader.vertexShader;
 
@@ -454,45 +454,44 @@ export class GeometryManager {
             shader.fragmentShader = shader.fragmentShader.replace(
                 '#include <dithering_fragment>',
                 `
-                vec2 center = vec2(0.5);
-                float dist = distance(vUv, center);
+            vec2 center = vec2(0.5);
+            float dist = distance(vUv, center);
 
-                float glow = smoothstep(0.35, 0.5, dist);
-                vec3 glowColor = vec3(1.0, 0.9, 0.6);
-                gl_FragColor.rgb += glow * 0.05 * glowColor;
+            float glow = smoothstep(0.35, 0.5, dist);
+            vec3 glowColor = vec3(1.0, 0.9, 0.6);
+            gl_FragColor.rgb += glow * 0.05 * glowColor;
 
-                #include <dithering_fragment>
-                `
+            #include <dithering_fragment>
+            `
             );
-        }; 
-        
+        };
 
-        const paintingGeometry = new THREE.PlaneGeometry(width, height); 
-        const painting = new THREE.Mesh(paintingGeometry, paintingMaterial); 
-        painting.position.set(position.x, position.y, position.z); 
-        painting.rotation.set(rotation.x, rotation.y, rotation.z); 
-        this.scene.add(painting); 
-        this.objects[imageURL] = painting; 
-        return painting; 
+
+        const paintingGeometry = new THREE.PlaneGeometry(width, height);
+        const painting = new THREE.Mesh(paintingGeometry, paintingMaterial);
+        painting.position.set(position.x, position.y, position.z);
+        painting.rotation.set(rotation.x, rotation.y, rotation.z);
+        this.scene.add(painting);
+        this.objects[imageURL] = painting;
+        return painting;
     }
 
 
 
-    
-    createDragonFractal(roomName, wallName , wallHeight = GALLERY_CONFIG.ROOM.WALL_HEIGHT, options = {}, 
-        scaleX, scaleY, scaleZ) 
-    {             
+
+    createDragonFractal(roomName, wallName, wallHeight = GALLERY_CONFIG.ROOM.WALL_HEIGHT, options = {},
+        scaleX, scaleY, scaleZ) {
         // Fraktal erzeugen
         const dragon = new DragonFractalGeometry(options);
 
         // Wand holen
         const wall = this.rooms[roomName].walls[wallName];
-   
+
         //Skalierung
         dragon.scale.set(scaleX, scaleY, scaleZ);
 
         // Position in Wand-Lokalsystem
-        const wallNormal = new THREE.Vector3(0,0,1); //Default
+        const wallNormal = new THREE.Vector3(0, 0, 1); //Default
         const Rotation = wall.rotation.z;
         wallNormal.applyAxisAngle(new THREE.Vector3(0, 0, 1), Rotation);   //Normale rotieren anhand Ausrichtung des Wand
         dragon.position.add(wallNormal.multiplyScalar(0.01));    //entlang der Normalen verschieben mit Offset 0.01
@@ -502,24 +501,20 @@ export class GeometryManager {
 
         // Objekt speichern
         this.objects[`dragon_${wallName}`] = dragon;
-        
+
         return dragon;
     }
 
-    createCarpet(roomCenter, width, depth, 
-        textureURL = '/3D_gallery/assets/images/carpet.jpg', 
-        normalMapURL = '/3D_gallery/assets/images/np_carpet.jpg') {
-
+    createCarpet(roomCenter, width, depth, textureURL = null) {
         const geometry = new THREE.PlaneGeometry(width, depth);
-        const textureLoader = new THREE.TextureLoader();
+        let material;
 
-        const map = textureLoader.load(textureURL);
-        const normalMap  = normalMapURL ? textureLoader.load(normalMapURL) : null; //lädt normalMap, wenn angegeben ist
-
-        const material = new THREE.MeshLambertMaterial({
-            map: map,
-            normalMap: normalMap
-        });
+        if (textureURL) {
+            const texture = new THREE.TextureLoader().load(textureURL);
+            material = new THREE.MeshLambertMaterial({ map: texture });
+        } else {
+            material = new THREE.MeshLambertMaterial({ color: 0xAA3333 });
+        }
 
         const carpet = new THREE.Mesh(geometry, material);
         carpet.receiveShadow = true;
@@ -527,7 +522,7 @@ export class GeometryManager {
         // Auf Boden legen (X/Z-Ebene)
         carpet.position.copy(roomCenter);
         carpet.position.z += 0.1; // leicht über Boden, kein z-fighting
-            
+
         this.rooms['room1'].floor.add(carpet);
         return carpet;
     }
