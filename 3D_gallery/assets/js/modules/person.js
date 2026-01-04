@@ -162,35 +162,35 @@ export class PersonManager {
      * Create the arms and hands of the person
      */
     createArms(personGroup, clothingMaterial, skinMaterial, scale) {
-        const armGeometry = new THREE.CylinderGeometry(0.04 * scale, 0.05 * scale, 0.5 * scale, 8);
+        const armGeometry = new THREE.CylinderGeometry(0.05 * scale, 0.04 * scale, 0.5 * scale, 8);
         const handGeometry = new THREE.SphereGeometry(0.04 * scale, 8, 8);
 
-        // Left arm
+        // Left arm - positioned at torso edge (torso top radius is 0.12)
         const leftArm = new THREE.Mesh(armGeometry, clothingMaterial);
-        leftArm.position.set(-0.2 * scale, 1.25 * scale, 0);
-        leftArm.rotation.z = 0.2;
+        leftArm.position.set(-0.16 * scale, 1.2 * scale, 0);
+        leftArm.rotation.z = -0.2; // Negative rotation: shoulder at body, hand angles outward
         leftArm.castShadow = true;
         leftArm.receiveShadow = true;
         personGroup.add(leftArm);
 
-        // Right arm
+        // Right arm - positioned at torso edge
         const rightArm = new THREE.Mesh(armGeometry, clothingMaterial);
-        rightArm.position.set(0.2 * scale, 1.25 * scale, 0);
-        rightArm.rotation.z = -0.2;
+        rightArm.position.set(0.16 * scale, 1.2 * scale, 0);
+        rightArm.rotation.z = 0.2; // Positive rotation: shoulder at body, hand angles outward
         rightArm.castShadow = true;
         rightArm.receiveShadow = true;
         personGroup.add(rightArm);
 
-        // Left hand
+        // Left hand - positioned at end of angled arm
         const leftHand = new THREE.Mesh(handGeometry, skinMaterial);
-        leftHand.position.set(-0.25 * scale, 0.95 * scale, 0);
+        leftHand.position.set(-0.21 * scale, 0.93 * scale, 0);
         leftHand.castShadow = true;
         leftHand.receiveShadow = true;
         personGroup.add(leftHand);
 
-        // Right hand
+        // Right hand - positioned at end of angled arm
         const rightHand = new THREE.Mesh(handGeometry, skinMaterial);
-        rightHand.position.set(0.25 * scale, 0.95 * scale, 0);
+        rightHand.position.set(0.21 * scale, 0.93 * scale, 0);
         rightHand.castShadow = true;
         rightHand.receiveShadow = true;
         personGroup.add(rightHand);
