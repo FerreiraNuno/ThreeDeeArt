@@ -289,9 +289,19 @@ export class PortalManager {
         this.portals = [];
         this.portalPairs = [];
 
-        // Create portal camera (reused for all portal views)
-        this.portalCamera = new THREE.PerspectiveCamera();
-        this.portalCamera.layers.enableAll();
+        // Create portal cameras for each recursion level
+        // We need separate cameras because each level has different transforms
+        this.portalCameras = [];
+        for (let i = 0; i < this.recursionDepth; i++) {
+            const cam = new THREE.PerspectiveCamera();
+            cam.layers.enableAll();
+            this.portalCameras.push(cam);
+        }
+        // Keep legacy reference for compatibility
+        this.portalCamera = this.portalCameras[0];
+
+        // Helper scene for rendering just portal meshes (for stencil writes)
+        this.helperScene = new THREE.Scene();
 
         // Depth-only material for frame depth write
         this.depthOnlyMaterial = createDepthOnlyMaterial();
@@ -518,12 +528,18 @@ export class PortalManager {
      * @private
      * @param {Portal} portal - Portal to render
      * @param {number} level - Current recursion level
+     * @param {THREE.Camera} viewCamera - The camera from which this portal is being viewed
      */
-    _renderPortalWithMaterialStencil(portal, level) {
+    _renderPortalWithMaterialStencil(portal, level, viewCamera = null) {
         if (level >= this.recursionDepth) return;
 
+        // Use main camera for level 0, otherwise use the passed view camera
+        const currentViewCamera = viewCamera || this.mainCamera;
         const destPortal = portal.linkedPortal;
         const stencilRef = level + 1;
+
+        // Get portal camera for this recursion level
+        const portalCam = this.portalCameras[level];
 
         // Step 1: Write portal shape to stencil buffer
         // Create a stencil writer material that increments stencil where portal is visible
@@ -542,24 +558,27 @@ export class PortalManager {
         portal.mesh.material = stencilWriterMat;
         portal.mesh.visible = true;
 
-        // Render portal mesh to write stencil
-        this.renderer.render(portal.mesh, this.mainCamera);
+        // Use helper scene to render just the portal mesh for proper stencil write
+        this.helperScene.add(portal.mesh);
+        this.renderer.render(this.helperScene, currentViewCamera);
+        this.helperScene.remove(portal.mesh);
 
-        // Restore original material
+        // Restore original material and add back to main scene
         portal.mesh.material = originalMaterial;
+        this.scene.add(portal.mesh);
         stencilWriterMat.dispose();
 
         // Step 2: Compute virtual camera for portal view
         updatePortalCamera(
-            this.mainCamera,
+            currentViewCamera,
             portal.mesh,
             destPortal.mesh,
-            this.portalCamera
+            portalCam
         );
 
         // Step 3: Apply oblique clipping to prevent rendering behind destination portal
         const destPlane = destPortal.getPlane();
-        applyObliqueClipping(this.portalCamera, destPlane);
+        applyObliqueClipping(portalCam, destPlane);
 
         // Step 4: Clear depth buffer for portal area and render scene through portal
         this.renderer.clearDepth();
@@ -573,7 +592,7 @@ export class PortalManager {
         this._setSceneStencilTest(stencilRef, THREE.EqualStencilFunc);
 
         // Render scene from portal camera
-        this.renderer.render(this.scene, this.portalCamera);
+        this.renderer.render(this.scene, portalCam);
 
         // Clear stencil from scene materials
         this._clearSceneStencilTest();
@@ -588,9 +607,10 @@ export class PortalManager {
             for (const p of this.portals) {
                 if (!p.enabled || !p.linkedPortal) continue;
 
-                // Check if this portal is visible from the portal camera
-                if (p.isPointInFront(this.portalCamera.position)) {
-                    this._renderPortalWithMaterialStencil(p, level + 1);
+                // Check if this portal is visible from the current portal camera
+                if (p.isPointInFront(portalCam.position)) {
+                    // Pass the current portal camera as the view camera for the next level
+                    this._renderPortalWithMaterialStencil(p, level + 1, portalCam);
                 }
             }
         }
@@ -610,8 +630,14 @@ export class PortalManager {
 
         portal.mesh.material = depthOnlyMat;
         portal.mesh.visible = true;
-        this.renderer.render(portal.mesh, this.mainCamera);
+
+        // Use helper scene for the depth write pass too
+        this.helperScene.add(portal.mesh);
+        this.renderer.render(this.helperScene, currentViewCamera);
+        this.helperScene.remove(portal.mesh);
+
         portal.mesh.material = originalMaterial;
+        this.scene.add(portal.mesh);
         depthOnlyMat.dispose();
     }
 
@@ -731,7 +757,16 @@ export class PortalManager {
      * @param {number} depth - Maximum recursion depth (1-10)
      */
     setRecursionDepth(depth) {
-        this.recursionDepth = Math.max(1, Math.min(10, depth));
+        const newDepth = Math.max(1, Math.min(10, depth));
+
+        // Create additional cameras if needed
+        while (this.portalCameras.length < newDepth) {
+            const cam = new THREE.PerspectiveCamera();
+            cam.layers.enableAll();
+            this.portalCameras.push(cam);
+        }
+
+        this.recursionDepth = newDepth;
     }
 
     /**

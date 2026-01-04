@@ -121,7 +121,7 @@ export const GALLERY_CONFIG = {
     // Portal settings
     PORTAL: {
         ENABLED: true,
-        RECURSION_DEPTH: 2,          // How many levels deep to render portals
+        RECURSION_DEPTH: 3,          // How many levels deep to render portals
         WIDTH: 3,                     // Default portal width
         HEIGHT: 4,                    // Default portal height
         FRAME_WIDTH: 0.15,            // Portal frame thickness
