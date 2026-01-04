@@ -1,27 +1,28 @@
-//für Glow-Effekt, optional pulsierend, additives Blending
-// beim Material noch THREE.AdditiveBlending setzen, damit der Glow „überstrahlt“.
+//für Glow-Effekt
+
 export const glowVertexShader = `
     attribute vec3 color;   //aus BufferGeometry
-    varying vec3 vColor;    // für Fragment Shader
+    varying vec3 vColor;    // für Fragment Shader 
     varying vec3 vPosition;
 
     void main() {
         vColor = color; //Farbe wird bei Übergabe interpoliert
-        vPosition = position;
+        vPosition = position; //Glow abhängig von Entfernung (interpoliert)
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     }
 `;
 
 export const glowFragmentShader = `
-    precision mediump float;
-    uniform vec3 glowColor;       // Farbe des Glow
-    uniform float intensity;      // Stärke des Glow
+    precision mediump float;    //Präzisionsangabe Gleitkommazahl zur Berechnung
+    uniform vec3 glowColor;       // von glowMaterial übergeben
+    uniform float intensity;      // für alle Fragmente gleich
     varying vec3 vPosition;
     varying vec3 vColor;
 
+    //Interpolationsfunktion für sanften Übergang des Glow-Effekts
     float smoothstep_custom(float edge0, float edge1, float x) {
-    float t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
-    return t * t * (3.0 - 2.0 * t);
+    float t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);   //Umrechnung zw. 0 und 1
+    return t * t * (3.0 - 2.0 * t); //Glättung des Übergangs
     }
 
 

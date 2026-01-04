@@ -16,7 +16,7 @@ export default class DragonFractalGeometry extends THREE.Object3D {
         this.geometry = new THREE.BufferGeometry(); //Vertices auf GPU -> Berechnungen viel schneller
 
         this.material = createGlowMaterial(this.color, this.intensity);
-        this.line = new THREE.Line(this.geometry, this.material);
+        this.line = new THREE.Line(this.geometry, this.material); //verbindet Punkte
 
         this.add(this.line);    //line wird als child an container angehängt
 
@@ -26,7 +26,7 @@ export default class DragonFractalGeometry extends THREE.Object3D {
     updateGeometry() {
         const points = this.fractal.getPoints();
         //float32array ist gpu-optimiert und direkt nutzbar
-        //buffergeometry benötigt typed arrays -> positions berücksichtigen Reihenfolge für Koord.
+        //buffergeometry arbeitet immer mit 3D-Koord: typed arrays -> positions berücksichtigen Reihenfolge für Koord.
         const positions = new Float32Array(points.length * 3);
         const colors = new Float32Array(points.length * 3);
         const color = new THREE.Color();
@@ -40,12 +40,7 @@ export default class DragonFractalGeometry extends THREE.Object3D {
 
             const t = i / (points.length-1);    //Verlauf 0..1
 
-            color.setHSL(t, 1.0, 0.5);  //Regenbogen
-
-            // soll den Farbverlauf verschieben für keine abrupten Übergänge => kein Unterschied
-            //const baseHue = this.currentOrder / this.maxOrder;
-            //color.setHSL((t + baseHue) % 1.0, 1.0, 0.5);
-            
+            color.setHSL(t, 1.0, 0.5);  //Regenbogen (Farbton, Sättigung, Helligkeit)    
 
             colors[i * 3]     = color.r;
             colors[i * 3 + 1] = color.g;

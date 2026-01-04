@@ -406,6 +406,7 @@ export class GeometryManager {
         this.objects.cube = cube;
         this.rooms['room2'].floor.add(cube);
 
+        
         this.lightingManager.addEmissiveLight
         (
             cube,
@@ -415,6 +416,7 @@ export class GeometryManager {
             distance: 12
             }
         );
+        
 
         return cube;
     }

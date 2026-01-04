@@ -338,14 +338,14 @@ class GalleryApp {
         const scene = this.managers.scene.getScene();
         const camera = this.managers.camera.getCamera();
 
-        // Composer
+        // Composer nimmt den normalen Renderer als Basis
         this.composer = new EffectComposer(renderer);
 
-        // RenderPass – rendert die Szene normal
+        // RenderPass rendert die Szene normal auf eine interne Textur, statt direkt auf den Bildschirm
         const renderPass = new RenderPass(scene, camera);
         this.composer.addPass(renderPass);
 
-        // UnrealBloomPass – Bloom-Effekt
+        // UnrealBloomPass nimmt Ergebnis von RenderPass, berechnet Glow
         const bloomParams = {
             strength: 1.5,  // Stärke des Glows
             radius: 0.4,    // Weichheit des Glows
@@ -359,6 +359,7 @@ class GalleryApp {
             bloomParams.threshold
         );
 
+        // Pässe werden der Reihe nach ausgeführt, Composer rendert Ergebnis auf Bildschirm
         this.composer.addPass(bloomPass);
     }
 
@@ -635,17 +636,7 @@ class GalleryApp {
         this.managers.renderer.getRenderer().autoClear = true;
     }
 
-
-    /**
-     * Handle window resize
-     */
-    /*
-    handleResize() {
-        this.managers.camera.updateAspectRatio();
-        this.managers.renderer.handleResize();
-    }
-    */
-
+    //Composer rendert in eigenen Texturen, bei Änderungen der Fenstergröße neu setzen -> sonst Glow verzerrt
     handleResize() {
         const width = window.innerWidth;
         const height = window.innerHeight;

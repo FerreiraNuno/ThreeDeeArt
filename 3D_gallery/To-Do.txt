@@ -1,1 +1,0 @@
-Fraktalobjekte, Glow-Effekt/Bloom, eigene Shader&Material, Refactoring, Galerie/Licht erweitert, Lerp-Fkt, mapping, cursor

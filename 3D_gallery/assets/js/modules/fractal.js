@@ -63,7 +63,7 @@ export default class DragonFractal {
             nx /= nLen;
             ny /= nLen;
 
-            //Jede zweite Linie kippen
+            //bei jedem zweiten Segment wir die Richtung der Normale gekippt
             if(i % 2 == 1) {
                 nx = -nx;
                 ny = -ny;
