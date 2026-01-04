@@ -104,8 +104,8 @@ class GalleryApp {
         try {
             this.initializeManagers();
             this.setupManagerConnections();
-            this.setupScene();
             this.setupIntersect();
+            this.setupScene();
             this.setupEventListeners();
             this.setupPostProcessing();
             this.start();
@@ -181,8 +181,23 @@ class GalleryApp {
         // Keyboard shortcuts for portal toggle
         window.addEventListener('keydown', (event) => this.handleGlobalKeyDown(event));
 
+        // Mouse click for picking up/dropping objects
+        window.addEventListener('click', (event) => this.handlePickupClick(event));
+
         // Update multiplayer status periodically
         setInterval(() => this.updateMultiplayerStatus(), 1000);
+    }
+
+    /**
+     * Handle click for picking up/dropping objects
+     */
+    handlePickupClick(event) {
+        // Only handle left click when pointer is locked (in game)
+        if (event.button !== 0) return;
+        if (!this.managers.camera.getControls().isLocked) return;
+
+        const camera = this.managers.camera.getCamera();
+        this.intersect.togglePickup(camera);
     }
 
     /**
@@ -205,6 +220,12 @@ class GalleryApp {
             const newDepth = Math.min(10, this.managers.portal.recursionDepth + 1);
             this.managers.portal.setRecursionDepth(newDepth);
             console.log(`Portal recursion depth: ${newDepth}`);
+        }
+
+        // Pick up / drop object with 'E' key
+        if (event.code === 'KeyE' && this.managers.camera.getControls().isLocked) {
+            const camera = this.managers.camera.getCamera();
+            this.intersect.togglePickup(camera);
         }
     }
 
@@ -233,11 +254,22 @@ class GalleryApp {
     setupScene() {
         this.managers.geometry.createGalleryStructure();
         this.managers.geometry.createCube();
+        this.createPickableCube();
         this.createArtworks();
         this.createFractal();
         this.doCarpet();
         this.createAudio();
         this.createPortals();
+    }
+
+    /**
+     * Create a pickable cube in the middle of the room
+     */
+    createPickableCube() {
+        const pickableCube = this.managers.geometry.createPickableCube();
+        
+        // Register it with the intersect system
+        this.intersect.addPickableObject(pickableCube);
     }
 
     /**
@@ -564,7 +596,28 @@ class GalleryApp {
         this.updateScene(deltaTime, currentTime);
         this.updateFractal(deltaTime);
         this.managers.geometry.animateCube(deltaTime);
+        this.updateHeldObject(deltaTime);
         this.renderScene();
+    }
+
+    /**
+     * Update held object position to follow camera and physics
+     */
+    updateHeldObject(deltaTime) {
+        const camera = this.managers.camera.getCamera();
+        
+        if (this.intersect) {
+            // Update crosshair color feedback
+            this.intersect.updateCrosshairFeedback(camera);
+            
+            // Update held object position
+            if (this.intersect.isHoldingObject()) {
+                this.intersect.updateHeldObject(camera);
+            }
+
+            // Update physics (gravity) for pickable objects
+            this.intersect.updatePhysics(deltaTime);
+        }
     }
 
     /**

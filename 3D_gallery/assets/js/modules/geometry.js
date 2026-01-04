@@ -528,6 +528,57 @@ export class GeometryManager {
     }
 
 
+    /**
+     * Create a pickable cube in the middle of the room
+     * @returns {THREE.Mesh} The pickable cube mesh
+     */
+    createPickableCube() {
+        const geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+        const material = new THREE.MeshStandardMaterial({
+            color: 0x00ffaa,
+            roughness: 0.3,
+            metalness: 0.6,
+            emissive: 0x003322,
+            emissiveIntensity: 0.3
+        });
+
+        const pickableCube = new THREE.Mesh(geometry, material);
+        pickableCube.position.set(0, 0.4, 0); // Center of room1, sitting on floor
+        pickableCube.castShadow = true;
+        pickableCube.receiveShadow = true;
+        pickableCube.name = 'pickableCube';
+
+        // Mark as pickable for raycasting
+        pickableCube.userData.isPickable = true;
+        pickableCube.userData.isHeld = false;
+
+        // Create bounding box for collision
+        pickableCube.BBox = new THREE.Box3().setFromObject(pickableCube);
+
+        this.objects.pickableCube = pickableCube;
+        this.scene.add(pickableCube);
+
+        // Add subtle glow light
+        if (this.lightingManager) {
+            this.lightingManager.addEmissiveLight(pickableCube, {
+                color: 0x00ffaa,
+                intensity: 0.5,
+                distance: 5
+            });
+        }
+
+        return pickableCube;
+    }
+
+    /**
+     * Update pickable cube bounding box (call after position change)
+     */
+    updatePickableCubeBBox() {
+        if (this.objects.pickableCube) {
+            this.objects.pickableCube.BBox.setFromObject(this.objects.pickableCube);
+        }
+    }
+
     getObjects() {
         return this.objects;
     }
