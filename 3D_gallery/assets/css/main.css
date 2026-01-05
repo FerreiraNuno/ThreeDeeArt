@@ -1,7 +1,7 @@
-/* Import Google Fonts */
+/* Google Fonts importieren */
 @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Roboto:wght@400&display=swap');
 
-/* CSS Reset and Global Styles */
+/* CSS Reset und globale Stile */
 * {
     box-sizing: border-box;
 }
@@ -27,7 +27,7 @@ body {
     z-index: 100;
 }
 
-/* Utility Classes */
+/* Hilfsklassen */
 .hidden {
     display: none !important;
 }

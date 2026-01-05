@@ -1,43 +1,41 @@
-// Gallery Configuration Constants
+// Galerie-Konfiguration
 export const GALLERY_CONFIG = {
-    // Scene dimensions
+    // Raum-Dimensionen
     ROOM: {
         WIDTH: 25,
         DEPTH: 25,
         WALL_HEIGHT: 8
     },
 
-    // Corridor dimensions
+    // Korridor-Dimensionen
     CORRIDOR: {
         WIDTH: 6,
         LENGTH: 10,
         WALL_HEIGHT: 8
     },
 
-    // Layout configuration
+    // Layout-Konfiguration
     LAYOUT: {
         ROOM1_CENTER: { x: 0, z: 0 },
-        CORRIDOR_CENTER: { x: 0, z: 30 }, // Room depth/2 + corridor length/2 + small gap
-        ROOM2_CENTER: { x: 0, z: 60 } // Room1 center + room depth + corridor length + room depth/2
+        CORRIDOR_CENTER: { x: 0, z: 30 },
+        ROOM2_CENTER: { x: 0, z: 60 }
     },
 
-    // Camera settings
+    // Kamera-Einstellungen
     CAMERA: {
         FOV: 75,
         NEAR: 0.1,
         FAR: 1000,
         INITIAL_Z: 3,
-        INITIAL_Y: 2, // Eye level height (raised for taller players)
+        INITIAL_Y: 2,
         MOVE_SPEED: 10,
-        // Collision boundary buffer from walls
         BOUNDARY_BUFFER: 0.5,
-        // Jump physics
         JUMP_VELOCITY: 8,
         GRAVITY: -25,
         GROUND_LEVEL: 1.7
     },
 
-    // Lighting
+    // Beleuchtung
     LIGHTING: {
         AMBIENT: {
             COLOR: 0x404040,
@@ -63,15 +61,15 @@ export const GALLERY_CONFIG = {
         }
     },
 
-    // Renderer settings
+    // Renderer-Einstellungen
     RENDERER: {
-        BACKGROUND_COLOR: 0x87CEEB, // Sky blue background
+        BACKGROUND_COLOR: 0x87CEEB, // Himmelblau
         ANTIALIAS: true,
         SHADOWS: true,
         SHADOW_TYPE: 'PCFSoft'
     },
 
-    // Textures
+    // Texturen
     TEXTURES: {
         FLOOR: 'assets/images/parkett.jpg',
         WALL: 'assets/images/white_parkett.jpg',
@@ -79,30 +77,30 @@ export const GALLERY_CONFIG = {
         CEILING: 'assets/images/wall1.jpg'
     },
 
-    // Texture settings
+    // Textur-Wiederholungen
     TEXTURE_REPEAT: {
         FLOOR: { x: 25, y: 25 },
         WALL: { x: 10, y: 2 },
         CEILING: { x: 1, y: 1 }
     },
 
-    // Materials
+    // Materialien
     MATERIALS: {
         WALL: {
-            COLOR: 0xf8f6f0 // Warm ivory - classic museum walls
+            COLOR: 0xf8f6f0 // Warmes Elfenbein
         },
         FLOOR: {
-            COLOR: 0x8a8a8a // Polished light concrete - modern gallery floor
+            COLOR: 0x8a8a8a // Polierter Beton
         },
         CEILING: {
-            COLOR: 0xf8f6f0 // Warm ivory - matches walls
+            COLOR: 0xf8f6f0 // Warmes Elfenbein
         },
         CUBE: {
-            COLOR: 0xff6b6b // Red cube
+            COLOR: 0xff6b6b // Rot
         }
     },
 
-    // Shadow settings
+    // Schatten-Einstellungen
     SHADOWS: {
         MAP_SIZE: 2048,
         CAMERA_NEAR: 0.5,
@@ -118,24 +116,24 @@ export const GALLERY_CONFIG = {
         CUBE_ROTATION_SPEED: 0.01
     },
 
-    // Portal settings (one-way portal system)
+    // Portal-Einstellungen (Einweg-Portal-System)
     PORTAL: {
         ENABLED: true,
-        RECURSION_DEPTH: 5,           // How many levels deep to render the infinite effect
-        WIDTH: 3,                     // Portal width
-        HEIGHT: 4,                    // Portal height
-        FRAME_WIDTH: 0.15,            // Portal frame thickness
-        FRAME_COLOR: 0x1a1a2e,        // Dark blue-gray frame
-        PORTAL_COLOR: 0x00aaff        // Portal surface color (semi-transparent)
+        RECURSION_DEPTH: 5,
+        WIDTH: 3,
+        HEIGHT: 4,
+        FRAME_WIDTH: 0.15,
+        FRAME_COLOR: 0x1a1a2e,
+        PORTAL_COLOR: 0x00aaff
     }
 };
 
-// Key mappings
+// Tastenbelegung
 export const KEY_MAPPINGS = {
     FORWARD: 'KeyW',
     BACKWARD: 'KeyS',
     LEFT: 'KeyA',
     RIGHT: 'KeyD',
     JUMP: 'Space',
-    TOGGLE_PORTALS: 'KeyP'  // Toggle portal rendering
+    TOGGLE_PORTALS: 'KeyP'
 };

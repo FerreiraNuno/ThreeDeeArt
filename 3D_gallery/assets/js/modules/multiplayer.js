@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 /**
- * Multiplayer management module for handling WebSocket connections and player synchronization
+ * Multiplayer-Verwaltung für WebSocket-Verbindungen und Spieler-Synchronisation
  */
 export class MultiplayerManager {
     constructor(scene, personManager, camera) {
@@ -13,17 +13,13 @@ export class MultiplayerManager {
         this.localPlayerId = null;
         this.remotePlayers = new Map();
         this.lastPositionUpdate = 0;
-        this.updateInterval = 100; // Send position updates every 100ms
+        this.updateInterval = 100; // Positions-Updates alle 100ms
 
         this.init();
     }
 
-    /**
-     * Initialize WebSocket connection
-     */
     init() {
         try {
-            // Connect to the server (adjust URL if needed)
             this.socket = io();
             this.setupEventListeners();
         } catch (error) {
@@ -31,13 +27,10 @@ export class MultiplayerManager {
         }
     }
 
-    /**
-     * Setup WebSocket event listeners
-     */
     setupEventListeners() {
         if (!this.socket) return;
 
-        // Connection established
+        // Verbindung hergestellt
         this.socket.on('connect', () => {
             console.log('Connected to multiplayer server');
             this.isConnected = true;
@@ -45,14 +38,14 @@ export class MultiplayerManager {
             this.joinRoom();
         });
 
-        // Connection lost
+        // Verbindung verloren
         this.socket.on('disconnect', () => {
             console.log('Disconnected from multiplayer server');
             this.isConnected = false;
             this.localPlayerId = null;
         });
 
-        // Receive list of existing players when joining
+        // Spielerliste beim Beitreten erhalten
         this.socket.on('players-list', (players) => {
             console.log('Received players list:', players);
             players.forEach(player => {
@@ -62,38 +55,35 @@ export class MultiplayerManager {
             });
         });
 
-        // New player joined
+        // Neuer Spieler beigetreten
         this.socket.on('player-joined', (player) => {
             console.log('Player joined:', player.name);
             this.addRemotePlayer(player);
         });
 
-        // Player left
+        // Spieler verlassen
         this.socket.on('player-left', (playerId) => {
             console.log('Player left:', playerId);
             this.removeRemotePlayer(playerId);
         });
 
-        // Player moved
+        // Spielerbewegung
         this.socket.on('player-moved', (movementData) => {
             this.updateRemotePlayer(movementData);
         });
 
-        // Chat message received (optional)
+        // Chat-Nachricht
         this.socket.on('chat-message', (messageData) => {
             this.displayChatMessage(messageData);
         });
     }
 
-    /**
-     * Join the multiplayer room
-     */
     joinRoom() {
         if (!this.socket || !this.isConnected) return;
 
         const cameraPos = this.camera.getPosition();
 
-        // Calculate proper Y rotation from camera's world direction
+        // Y-Rotation aus Blickrichtung berechnen
         const direction = this.camera.getWorldDirection();
         const yRotation = Math.atan2(direction.x, direction.z);
 
@@ -101,12 +91,12 @@ export class MultiplayerManager {
             name: this.generatePlayerName(),
             position: {
                 x: cameraPos.x,
-                y: cameraPos.y, // Keep camera height for position tracking
+                y: cameraPos.y,
                 z: cameraPos.z
             },
             rotation: {
-                x: 0, // We only need Y rotation for player orientation
-                y: yRotation, // Proper 360-degree horizontal look direction
+                x: 0,
+                y: yRotation,
                 z: 0
             },
             color: this.generateRandomColor()
@@ -116,17 +106,16 @@ export class MultiplayerManager {
     }
 
     /**
-     * Add a remote player to the scene
+     * Entfernten Spieler zur Szene hinzufügen
      */
     addRemotePlayer(playerData) {
         if (this.remotePlayers.has(playerData.id)) return;
 
-        // Person model dimensions adjusted for taller players (scale 1.15)
         const playerScale = 1.15;
         const personGroupGroundOffset = -0.2 * playerScale;
         const cameraHeight = 1.7;
 
-        // Calculate Y position: if jumping (camera above 1.6), offset accordingly
+        // Y-Position berechnen
         const jumpHeight = Math.max(0, playerData.position.y - cameraHeight);
         const initialY = personGroupGroundOffset + jumpHeight;
 
@@ -145,13 +134,10 @@ export class MultiplayerManager {
             }
         );
 
-        // Set initial rotation to match camera direction
-        // Use the calculated Y rotation for proper 360-degree orientation
         playerProp.rotation.y = playerData.rotation.y;
 
         console.log(`Player ${playerData.name} created with Y rotation: ${playerData.rotation.y} radians (${(playerData.rotation.y * 180 / Math.PI).toFixed(1)} degrees)`);
 
-        // Add player name label (optional)
         this.addPlayerNameLabel(playerProp, playerData.name);
 
         this.remotePlayers.set(playerData.id, {
@@ -163,18 +149,13 @@ export class MultiplayerManager {
     }
 
     /**
-     * Remove a remote player from the scene
+     * Entfernten Spieler aus der Szene entfernen
      */
     removeRemotePlayer(playerId) {
         const remotePlayer = this.remotePlayers.get(playerId);
         if (remotePlayer) {
-            // Remove from scene
             this.scene.remove(remotePlayer.prop);
-
-            // Remove from PersonManager
             this.personManager.removePerson(`remote_${playerId}`);
-
-            // Remove from our tracking
             this.remotePlayers.delete(playerId);
 
             console.log(`Removed remote player: ${playerId}`);
@@ -182,24 +163,21 @@ export class MultiplayerManager {
     }
 
     /**
-     * Update remote player position and rotation
+     * Position und Rotation eines entfernten Spielers aktualisieren
      */
     updateRemotePlayer(movementData) {
         const remotePlayer = this.remotePlayers.get(movementData.id);
         if (remotePlayer) {
             const prop = remotePlayer.prop;
 
-            // Store previous position for movement detection
             if (!prop.previousPosition) {
                 prop.previousPosition = prop.position.clone();
             }
 
-            // Person model adjusted for taller players (scale 1.15)
             const playerScale = 1.15;
             const personGroupGroundOffset = -0.2 * playerScale;
             const cameraHeight = 1.7;
 
-            // Calculate Y position: if jumping (camera above 1.6), offset accordingly
             const jumpHeight = Math.max(0, movementData.position.y - cameraHeight);
             const targetY = personGroupGroundOffset + jumpHeight;
 
@@ -209,43 +187,30 @@ export class MultiplayerManager {
                 movementData.position.z
             );
 
-            // Calculate movement for animation
+            // Bewegung für Animation erkennen
             const movement = targetPosition.distanceTo(prop.previousPosition);
             const isMoving = movement > 0.01;
 
-            // Update animation state for walking
             if (prop.animationState) {
-                // Smooth transition of walking state
                 if (isMoving) {
                     prop.animationState.isWalking = true;
-                } else {
-                    // Don't immediately stop walking animation, let it fade out naturally
-                    // The PersonManager will handle the smooth transition to neutral
                 }
             }
 
-            // Smoothly interpolate horizontal position
+            // Horizontale Position interpolieren
             prop.position.x = THREE.MathUtils.lerp(prop.position.x, targetPosition.x, 0.15);
             prop.position.z = THREE.MathUtils.lerp(prop.position.z, targetPosition.z, 0.15);
 
-            // Update previous position
             prop.previousPosition.copy(targetPosition);
 
-            // Handle smooth jumping animation
-            // Pass the target Y which already accounts for ground offset
             this.personManager.updateJumpingAnimation(prop, targetY);
-
-            // Update rotation to match camera direction
-            // Use the calculated Y rotation for proper 360-degree orientation
             prop.rotation.y = movementData.rotation.y;
-
-            // Update bounding box and helper to match new position
             this.personManager.updatePersonBoundingBox(`remote_${movementData.id}`);
         }
     }
 
     /**
-     * Send local player movement to server
+     * Lokale Spielerbewegung an Server senden
      */
     sendMovement(position, rotation) {
         if (!this.socket || !this.isConnected) return;
@@ -253,7 +218,6 @@ export class MultiplayerManager {
         const now = Date.now();
         if (now - this.lastPositionUpdate < this.updateInterval) return;
 
-        // Calculate proper Y rotation from camera's world direction
         const direction = this.camera.getWorldDirection();
         const yRotation = Math.atan2(direction.x, direction.z);
 
@@ -265,11 +229,10 @@ export class MultiplayerManager {
             },
             rotation: {
                 x: rotation.x,
-                y: yRotation, // Use calculated Y rotation for proper 360-degree mapping
+                y: yRotation,
                 z: rotation.z
             },
-            // Add movement state for animations
-            isJumping: position.y > 1.6 + 0.1, // Jumping if above camera ground level + threshold
+            isJumping: position.y > 1.6 + 0.1,
             timestamp: Date.now()
         });
 
@@ -277,10 +240,9 @@ export class MultiplayerManager {
     }
 
     /**
-     * Add a name label above a player
+     * Namenslabel über Spieler hinzufügen
      */
     addPlayerNameLabel(playerProp, name) {
-        // Create text sprite for player name (simplified version)
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         canvas.width = 256;
@@ -304,26 +266,16 @@ export class MultiplayerManager {
         playerProp.add(sprite);
     }
 
-    /**
-     * Display chat message (optional feature)
-     */
     displayChatMessage(messageData) {
         console.log(`[${messageData.playerName}]: ${messageData.message}`);
-        // Could implement UI chat display here
     }
 
-    /**
-     * Send chat message (optional feature)
-     */
     sendChatMessage(message) {
         if (!this.socket || !this.isConnected) return;
 
         this.socket.emit('chat-message', { message });
     }
 
-    /**
-     * Generate a random player name
-     */
     generatePlayerName() {
         const adjectives = ['Swift', 'Brave', 'Clever', 'Bold', 'Quick', 'Smart', 'Cool', 'Epic'];
         const nouns = ['Explorer', 'Visitor', 'Guest', 'Wanderer', 'Observer', 'Traveler'];
@@ -334,42 +286,22 @@ export class MultiplayerManager {
         return `${adjective}${noun}`;
     }
 
-    /**
-     * Generate a random color for the player
-     */
     generateRandomColor() {
         const colors = [
-            0xff6b6b, // Red
-            0x4ecdc4, // Teal
-            0x45b7d1, // Blue
-            0x96ceb4, // Green
-            0xfeca57, // Yellow
-            0xff9ff3, // Pink
-            0x54a0ff, // Light Blue
-            0x5f27cd, // Purple
-            0x00d2d3, // Cyan
-            0xff9f43  // Orange
+            0xff6b6b, 0x4ecdc4, 0x45b7d1, 0x96ceb4, 0xfeca57,
+            0xff9ff3, 0x54a0ff, 0x5f27cd, 0x00d2d3, 0xff9f43
         ];
         return colors[Math.floor(Math.random() * colors.length)];
     }
 
-    /**
-     * Get connection status
-     */
     isMultiplayerConnected() {
         return this.isConnected;
     }
 
-    /**
-     * Get number of connected players
-     */
     getPlayerCount() {
         return this.remotePlayers.size + (this.isConnected ? 1 : 0);
     }
 
-    /**
-     * Cleanup when shutting down
-     */
     disconnect() {
         if (this.socket) {
             this.socket.disconnect();

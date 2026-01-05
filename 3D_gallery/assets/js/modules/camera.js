@@ -3,7 +3,7 @@ import { PointerLockControls } from 'three/addons/controls/PointerLockControls.j
 import { GALLERY_CONFIG, KEY_MAPPINGS } from '../config/constants.js';
 
 /**
- * Combined Camera and Controls management module
+ * Kamera- und Steuerungs-Verwaltung
  */
 export class CameraManager {
     constructor(renderer) {
@@ -17,16 +17,13 @@ export class CameraManager {
 
         this.camera.position.set(0, GALLERY_CONFIG.CAMERA.INITIAL_Y, GALLERY_CONFIG.CAMERA.INITIAL_Z);
 
-        // Setup pointer lock controls
         this.controls = new PointerLockControls(this.camera, document.body);
 
-        // Limit vertical look angle to prevent gimbal lock issues
-        // Polar angle: 0 = up, π/2 = horizontal, π = down
-        // Limit to 89° from horizontal (1° from straight up/down)
-        this.controls.minPolarAngle = Math.PI / 180; // 1° from straight up
-        this.controls.maxPolarAngle = Math.PI - (Math.PI / 180); // 1° from straight down
+        // Vertikalen Blickwinkel begrenzen (verhindert Gimbal-Lock)
+        this.controls.minPolarAngle = Math.PI / 180;
+        this.controls.maxPolarAngle = Math.PI - (Math.PI / 180);
 
-        // Smooth keyboard movement state
+        // Tastatursteuerung
         this.keys = {
             forward: false,
             backward: false,
@@ -35,7 +32,7 @@ export class CameraManager {
             jump: false
         };
 
-        // Jump physics state
+        // Sprung-Physik
         this.jumpState = {
             isJumping: false,
             verticalVelocity: 0,
@@ -56,16 +53,12 @@ export class CameraManager {
     }
 
     setupPointerLock() {
-        // Click to enable pointer lock
-
-        // dragclick mouse to enable pointer lock
         document.addEventListener('mousedown', (event) => {
             if (event.button === 0) {
                 this.controls.lock();
             }
         });
 
-        // Listen for pointer lock events
         this.controls.addEventListener('lock', () => {
             console.log('Pointer locked');
         });
@@ -124,22 +117,18 @@ export class CameraManager {
         const currentPosition = this.controls.getObject().position;
         const groundLevel = GALLERY_CONFIG.CAMERA.GROUND_LEVEL;
 
-        // Check if player is on ground
         this.jumpState.isOnGround = currentPosition.y <= groundLevel;
 
-        // Handle jump input
         if (this.keys.jump && this.jumpState.isOnGround && !this.jumpState.isJumping) {
             this.jumpState.isJumping = true;
             this.jumpState.verticalVelocity = GALLERY_CONFIG.CAMERA.JUMP_VELOCITY;
             this.jumpState.isOnGround = false;
         }
 
-        // Apply gravity and update vertical position
         if (this.jumpState.isJumping || !this.jumpState.isOnGround) {
             this.jumpState.verticalVelocity += GALLERY_CONFIG.CAMERA.GRAVITY * deltaTime;
             currentPosition.y += this.jumpState.verticalVelocity * deltaTime;
 
-            // Check if landed
             if (currentPosition.y <= groundLevel) {
                 currentPosition.y = groundLevel;
                 this.jumpState.verticalVelocity = 0;
@@ -150,12 +139,10 @@ export class CameraManager {
     }
 
     updateMovement(deltaTime) {
-        // Update jump physics first
         this.updateJumpPhysics(deltaTime);
 
-        // Handle horizontal movement
         if (!this.keys.forward && !this.keys.backward && !this.keys.left && !this.keys.right) {
-            return; // No horizontal movement needed
+            return;
         }
 
         const moveSpeed = GALLERY_CONFIG.CAMERA.MOVE_SPEED * deltaTime;
@@ -169,10 +156,10 @@ export class CameraManager {
         velocity.normalize();
         velocity.multiplyScalar(moveSpeed);
 
-        // get direction where the camera is pointing
+        // Blickrichtung der Kamera
         const direction = new THREE.Vector3();
         this.camera.getWorldDirection(direction);
-        direction.y = 0; // Keep movement horizontal
+        direction.y = 0;
         direction.normalize();
         const right = new THREE.Vector3();
         right.crossVectors(direction, this.camera.up);
@@ -181,19 +168,17 @@ export class CameraManager {
         movement.addScaledVector(direction, -velocity.z);
         movement.addScaledVector(right, velocity.x);
 
-        const previousPosition = this.controls.getObject().position.clone(); //vorherige Position merken
+        const previousPosition = this.controls.getObject().position.clone();
         const newPosition = previousPosition.clone().add(movement);
 
-        // Preserve the Y position from jump physics
         newPosition.y = previousPosition.y;
 
-        // Temporäre Kamera-BoundingBox für die geplante Position
+        // Temporäre BoundingBox für Kollisionserkennung
         const tempPlayerBB = new THREE.Box3().setFromCenterAndSize(
             newPosition,
             new THREE.Vector3(1, 1, 1)
         );
 
-        // Kollision mit Objekt checken
         let collided = false;
         const cube = this.geometryManager.getObjects().cube;
         if (tempPlayerBB.intersectsBox(cube.BBox)) {
@@ -201,7 +186,6 @@ export class CameraManager {
             console.log('Kollision!');
         }
 
-        // Wenn keine Kollision -> Kamera bewegen
         if (!collided) {
             this.controls.getObject().position.copy(newPosition);
             this.applyBoundaryConstraints(this.controls.getObject().position);
@@ -209,20 +193,16 @@ export class CameraManager {
     }
 
     /**
-    * Is called every frame. It checks if the camera has surpassed the boundaries of the gallery
-    * and places it back within bounds before the frame is rendered.
-    * This allows the camera to still move at an angle to the walls.
-    */
+     * Prüft ob Kamera die Galerie-Grenzen überschritten hat und korrigiert die Position
+     */
     applyBoundaryConstraints(position) {
         const { WIDTH, DEPTH } = GALLERY_CONFIG.ROOM;
         const { WIDTH: CORRIDOR_WIDTH } = GALLERY_CONFIG.CORRIDOR;
         const buffer = GALLERY_CONFIG.CAMERA.BOUNDARY_BUFFER;
 
-        // Define bounds for the entire gallery space
         const room1Z = GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.z;
         const room2Z = GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.z;
 
-        // Overall gallery bounds
         const overallBounds = {
             MIN_X: -WIDTH / 2 + buffer,
             MAX_X: WIDTH / 2 - buffer,
@@ -230,20 +210,16 @@ export class CameraManager {
             MAX_Z: room2Z + DEPTH / 2 - buffer
         };
 
-        // Check if player is in corridor area
         const corridorStartZ = room1Z + DEPTH / 2;
         const corridorEndZ = room2Z - DEPTH / 2;
         const inCorridor = position.z >= corridorStartZ && position.z <= corridorEndZ;
 
         if (inCorridor) {
-            // In corridor - constrain to corridor width
             position.x = Math.max(-CORRIDOR_WIDTH / 2 + buffer, Math.min(CORRIDOR_WIDTH / 2 - buffer, position.x));
         } else {
-            // In rooms - constrain to room width
             position.x = Math.max(overallBounds.MIN_X, Math.min(overallBounds.MAX_X, position.x));
         }
 
-        // Always constrain Z to overall gallery bounds
         position.z = Math.max(overallBounds.MIN_Z, Math.min(overallBounds.MAX_Z, position.z));
     }
 
@@ -256,7 +232,6 @@ export class CameraManager {
     }
 
     update(deltaTime) {
-        // Update smooth keyboard movement
         this.updateMovement(deltaTime);
     }
 
@@ -280,32 +255,28 @@ export class CameraManager {
     }
 
     /**
-     * Get the current camera position
-     * @returns {THREE.Vector3} Current camera position
+     * Aktuelle Kamera-Position abrufen
      */
     getPosition() {
         return this.controls.getObject().position.clone();
     }
 
     /**
-     * Get the current camera rotation
-     * @returns {THREE.Euler} Current camera rotation
+     * Aktuelle Kamera-Rotation abrufen
      */
     getRotation() {
         return this.controls.getObject().rotation.clone();
     }
 
     /**
-     * Set the camera position (for multiplayer synchronization if needed)
-     * @param {THREE.Vector3} position - New position
+     * Kamera-Position setzen
      */
     setPosition(position) {
         this.controls.getObject().position.copy(position);
     }
 
     /**
-     * Set the camera rotation (for multiplayer synchronization if needed)
-     * @param {THREE.Euler} rotation - New rotation
+     * Kamera-Rotation setzen
      */
     setRotation(rotation) {
         this.controls.getObject().rotation.copy(rotation);

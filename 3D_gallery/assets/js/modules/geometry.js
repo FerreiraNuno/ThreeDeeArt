@@ -7,7 +7,7 @@ import DragonFractalGeometry from './fractalGeometry.js';
 import { createGlowMaterial } from './glowMaterial.js';
 
 /**
- * Geometry and objects management module
+ * Geometrie- und Objekt-Verwaltung
  */
 export class GeometryManager {
     constructor(scene) {
@@ -20,28 +20,21 @@ export class GeometryManager {
         this.personManager = new PersonManager(scene);
     }
 
-    // Setter, um den LightingManager zu verknüpfen
     setLightingManager(lightingManager) {
         this.lightingManager = lightingManager;
     }
 
-    // Getter
     getLightingManager() {
         return this.lightingManager;
     }
 
     /**
-     * Create a floor for a specific area
-     * @param {number} width - Floor width
-     * @param {number} depth - Floor depth
-     * @param {THREE.Vector3} position - Floor position
-     * @param {string} name - Identifier for the floor
-     * @returns {THREE.Mesh} The floor mesh
+     * Boden für einen Bereich erstellen
      */
     createFloor(width = GALLERY_CONFIG.ROOM.WIDTH, depth = GALLERY_CONFIG.ROOM.DEPTH, position = new THREE.Vector3(0, 0, 0), name = 'floor') {
         const geometry = new THREE.PlaneGeometry(width, depth);
 
-        // Elegant polished concrete floor - modern gallery aesthetic
+        // Polierter Beton für moderne Galerie-Optik
         const material = new THREE.MeshStandardMaterial({
             color: GALLERY_CONFIG.MATERIALS.FLOOR.COLOR,
             roughness: 0.15,
@@ -59,17 +52,10 @@ export class GeometryManager {
     }
 
     /**
-     * Create walls for a room
-     * @param {number} width - Room width
-     * @param {number} depth - Room depth
-     * @param {number} height - Wall height
-     * @param {THREE.Vector3} center - Room center position
-     * @param {string} name - Identifier for the walls
-     * @param {Object} openings - Wall openings configuration
-     * @returns {Object} Object containing all wall meshes
+     * Wände für einen Raum erstellen
      */
     createWalls(width = GALLERY_CONFIG.ROOM.WIDTH, depth = GALLERY_CONFIG.ROOM.DEPTH, height = GALLERY_CONFIG.ROOM.WALL_HEIGHT, center = new THREE.Vector3(0, 0, 0), name = 'walls', openings = {}) {
-        // Clean matte gallery walls - classic museum aesthetic
+        // Matte Galeriewände
         const wallMaterial = new THREE.MeshStandardMaterial({
             color: GALLERY_CONFIG.MATERIALS.WALL.COLOR,
             roughness: 0.9,
@@ -78,7 +64,7 @@ export class GeometryManager {
 
         const walls = {};
 
-        // Back wall (negative Z)
+        // Hintere Wand
         if (!openings.back) {
             const backWallGeometry = new THREE.PlaneGeometry(width, height);
             const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
@@ -87,14 +73,13 @@ export class GeometryManager {
             walls.backWall = backWall;
             this.scene.add(backWall);
         } else if (openings.back === 'doorway') {
-            // Create wall with doorway opening
             const doorwayWalls = this.createWallWithDoorway(width, height, center.x, center.y + height / 2, center.z - depth / 2, 0, wallMaterial, 'back');
             walls.backWallLeft = doorwayWalls.left;
             walls.backWallRight = doorwayWalls.right;
             walls.backWallTop = doorwayWalls.top;
         }
 
-        // Front wall (positive Z)
+        // Vordere Wand
         if (!openings.front) {
             const frontWallGeometry = new THREE.PlaneGeometry(width, height);
             const frontWall = new THREE.Mesh(frontWallGeometry, wallMaterial);
@@ -104,14 +89,13 @@ export class GeometryManager {
             walls.frontWall = frontWall;
             this.scene.add(frontWall);
         } else if (openings.front === 'doorway') {
-            // Create wall with doorway opening
             const doorwayWalls = this.createWallWithDoorway(width, height, center.x, center.y + height / 2, center.z + depth / 2, Math.PI, wallMaterial, 'front');
             walls.frontWallLeft = doorwayWalls.left;
             walls.frontWallRight = doorwayWalls.right;
             walls.frontWallTop = doorwayWalls.top;
         }
 
-        // Left wall (negative X)
+        // Linke Wand
         if (!openings.left) {
             const leftWallGeometry = new THREE.PlaneGeometry(depth, height);
             const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
@@ -122,7 +106,7 @@ export class GeometryManager {
             this.scene.add(leftWall);
         }
 
-        // Right wall (positive X)
+        // Rechte Wand
         if (!openings.right) {
             const rightWallGeometry = new THREE.PlaneGeometry(depth, height);
             const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
@@ -135,7 +119,6 @@ export class GeometryManager {
 
         this.objects[name] = walls;
 
-        // Add bounding boxes for collision detection
         for (const wall of Object.values(walls)) {
             wall.BBox = new THREE.Box3().setFromObject(wall);
         }
@@ -143,18 +126,11 @@ export class GeometryManager {
     }
 
     /**
-     * Create a ceiling for a specific area
-     * @param {number} width - Ceiling width
-     * @param {number} depth - Ceiling depth
-     * @param {number} height - Ceiling height
-     * @param {THREE.Vector3} position - Ceiling position
-     * @param {string} name - Identifier for the ceiling
-     * @returns {THREE.Mesh} The ceiling mesh
+     * Decke erstellen
      */
     createCeiling(width = GALLERY_CONFIG.ROOM.WIDTH, depth = GALLERY_CONFIG.ROOM.DEPTH, height = GALLERY_CONFIG.ROOM.WALL_HEIGHT, position = new THREE.Vector3(0, 0, 0), name = 'ceiling') {
         const geometry = new THREE.PlaneGeometry(width, depth);
 
-        // Clean white ceiling - matches gallery aesthetic
         const material = new THREE.MeshStandardMaterial({
             color: GALLERY_CONFIG.MATERIALS.CEILING.COLOR,
             roughness: 0.95,
@@ -171,11 +147,7 @@ export class GeometryManager {
     }
 
     /**
-     * Create a complete room with floor, walls, and ceiling
-     * @param {THREE.Vector3} center - Room center position
-     * @param {string} name - Room identifier
-     * @param {Object} openings - Wall openings configuration
-     * @returns {Object} Object containing all room elements
+     * Kompletten Raum erstellen
      */
     createRoom(center = new THREE.Vector3(0, 0, 0), name = 'room', openings = {}) {
         const { WIDTH, DEPTH, WALL_HEIGHT } = GALLERY_CONFIG.ROOM;
@@ -191,16 +163,11 @@ export class GeometryManager {
     }
 
     /**
-     * Create a corridor connecting two rooms
-     * @param {THREE.Vector3} start - Start position
-     * @param {THREE.Vector3} end - End position
-     * @param {string} name - Corridor identifier
-     * @returns {Object} Object containing all corridor elements
+     * Korridor zwischen zwei Räumen erstellen
      */
     createCorridor(start, end, name = 'corridor') {
         const { WIDTH, WALL_HEIGHT } = GALLERY_CONFIG.CORRIDOR;
 
-        // Calculate corridor center and length
         const center = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
         const length = start.distanceTo(end);
 
@@ -218,27 +185,16 @@ export class GeometryManager {
         return this.corridors;
     }
 
-
     /**
-     * Create a wall with a doorway opening
-     * @param {number} wallWidth - Total wall width
-     * @param {number} wallHeight - Wall height
-     * @param {number} x - Wall X position
-     * @param {number} y - Wall Y position
-     * @param {number} z - Wall Z position
-     * @param {number} rotationY - Wall rotation around Y axis
-     * @param {THREE.Material} material - Wall material
-     * @param {string} direction - Wall direction (for naming)
-     * @returns {Object} Object containing wall segments
+     * Wand mit Durchgang erstellen
      */
     createWallWithDoorway(wallWidth, wallHeight, x, y, z, rotationY, material, direction) {
         const doorwayWidth = GALLERY_CONFIG.CORRIDOR.WIDTH;
-        const doorwayHeight = 6; // Height of the doorway opening
+        const doorwayHeight = 6;
         const sideWallWidth = (wallWidth - doorwayWidth) / 2;
 
         const walls = {};
 
-        // Left wall segment
         if (sideWallWidth > 0) {
             const leftGeometry = new THREE.PlaneGeometry(sideWallWidth, wallHeight);
             const leftWall = new THREE.Mesh(leftGeometry, material);
@@ -249,7 +205,6 @@ export class GeometryManager {
             this.scene.add(leftWall);
         }
 
-        // Right wall segment
         if (sideWallWidth > 0) {
             const rightGeometry = new THREE.PlaneGeometry(sideWallWidth, wallHeight);
             const rightWall = new THREE.Mesh(rightGeometry, material);
@@ -260,7 +215,6 @@ export class GeometryManager {
             this.scene.add(rightWall);
         }
 
-        // Top wall segment (above doorway)
         const topWallHeight = wallHeight - doorwayHeight;
         if (topWallHeight > 0) {
             const topGeometry = new THREE.PlaneGeometry(doorwayWidth, topWallHeight);
@@ -272,7 +226,6 @@ export class GeometryManager {
             this.scene.add(topWall);
         }
 
-        // Add bounding boxes for collision detection
         for (const wall of Object.values(walls)) {
             wall.BBox = new THREE.Box3().setFromObject(wall);
         }
@@ -281,16 +234,9 @@ export class GeometryManager {
     }
 
     /**
-     * Create walls for a corridor (only left and right walls)
-     * @param {number} width - Corridor width
-     * @param {number} length - Corridor length
-     * @param {number} height - Wall height
-     * @param {THREE.Vector3} center - Corridor center position
-     * @param {string} name - Identifier for the walls
-     * @returns {Object} Object containing corridor wall meshes
+     * Korridorwände erstellen
      */
     createCorridorWalls(width, length, height, center, name) {
-        // Clean matte gallery walls - matches room aesthetic
         const wallMaterial = new THREE.MeshStandardMaterial({
             color: GALLERY_CONFIG.MATERIALS.WALL.COLOR,
             roughness: 0.9,
@@ -299,7 +245,6 @@ export class GeometryManager {
 
         const walls = {};
 
-        // Left wall (negative X)
         const leftWallGeometry = new THREE.PlaneGeometry(length, height);
         const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
         leftWall.position.set(center.x - width / 2, center.y + height / 2, center.z);
@@ -308,7 +253,6 @@ export class GeometryManager {
         walls.leftWall = leftWall;
         this.scene.add(leftWall);
 
-        // Right wall (positive X)
         const rightWallGeometry = new THREE.PlaneGeometry(length, height);
         const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
         rightWall.position.set(center.x + width / 2, center.y + height / 2, center.z);
@@ -319,7 +263,6 @@ export class GeometryManager {
 
         this.objects[name] = walls;
 
-        // Add bounding boxes for collision detection
         for (const wall of Object.values(walls)) {
             wall.BBox = new THREE.Box3().setFromObject(wall);
         }
@@ -327,7 +270,6 @@ export class GeometryManager {
     }
 
     createGalleryStructure() {
-        // Create Room 1 (main gallery room) with doorway to corridor
         const room1Center = new THREE.Vector3(
             GALLERY_CONFIG.LAYOUT.ROOM1_CENTER.x,
             0,
@@ -336,12 +278,10 @@ export class GeometryManager {
 
         this.createRoom(room1Center, 'room1', { front: 'doorway' });
 
-        // Create corridor connecting the rooms
         const corridorStart = new THREE.Vector3(0, 0, GALLERY_CONFIG.ROOM.DEPTH / 2);
         const corridorEnd = new THREE.Vector3(0, 0, GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.z - GALLERY_CONFIG.ROOM.DEPTH / 2);
         this.createCorridor(corridorStart, corridorEnd, 'mainCorridor');
 
-        // Create Room 2 (empty gallery room) with doorway to corridor
         const room2Center = new THREE.Vector3(
             GALLERY_CONFIG.LAYOUT.ROOM2_CENTER.x,
             0,
@@ -350,64 +290,41 @@ export class GeometryManager {
         this.createRoom(room2Center, 'room2', { back: 'doorway' });
     }
 
-    /**
-     * Create a player prop using the PersonManager
-     * @param {THREE.Vector3} position - Position to place the player
-     * @param {Object} options - Customization options
-     * @returns {THREE.Group} The player group object
-     */
     createPlayerProp(position = new THREE.Vector3(0, 0, 0), options = {}) {
         const player = this.personManager.createPlayerProp(position, options);
         this.objects.player = player;
         return player;
     }
 
-    /**
-     * Create a person using the PersonManager
-     * @param {THREE.Vector3} position - Position to place the person
-     * @param {Object} options - Customization options
-     * @returns {THREE.Group} The person group object
-     */
     createPerson(position = new THREE.Vector3(0, 0, 0), options = {}) {
         return this.personManager.createPerson(position, options);
     }
 
-    /**
-     * Get the PersonManager instance
-     * @returns {PersonManager} The person manager
-     */
     getPersonManager() {
         return this.personManager;
     }
 
-    //hier auch BBox
     createCube() {
         const geometry = new THREE.BoxGeometry(1, 1, 1);
         const material = createGlowMaterial(0xff00ff, 1.5);
         const cube = new THREE.Mesh(geometry, material);
-        cube.position.set(0, -9, 5); // Center of room, sitting properly on floor
+        cube.position.set(0, -9, 5);
         cube.castShadow = true;
         cube.receiveShadow = true;
 
         cube.BBox = new THREE.Box3().setFromObject(cube);
-        //kann später gelöscht werden
-        //const bboxHelper = new THREE.Box3Helper(cube.BBox, 0x0000ff);
-        //this.scene.add(bboxHelper);
 
         this.objects.cube = cube;
         this.rooms['room2'].floor.add(cube);
 
-
-        this.lightingManager.addEmissiveLight
-            (
-                cube,
-                {
-                    color: 0xff00ff,
-                    intensity: 1.2,
-                    distance: 12
-                }
-            );
-
+        this.lightingManager.addEmissiveLight(
+            cube,
+            {
+                color: 0xff00ff,
+                intensity: 1.2,
+                distance: 12
+            }
+        );
 
         return cube;
     }
@@ -415,13 +332,9 @@ export class GeometryManager {
     animateCube(deltaTime) {
         if (this.objects.cube) {
             const speed = GALLERY_CONFIG.ANIMATION.CUBE_ROTATION_SPEED;
-            //this.objects.cube.rotation.y += speed;
             this.objects.cube.rotation.z += speed;
-
-            //this.objects.cube.updateLightUniforms();
         }
     }
-
 
     createPainting(imageURL, width, height, position, rotation) {
         const textureLoader = new THREE.TextureLoader();
@@ -431,8 +344,6 @@ export class GeometryManager {
         paintingMaterial.onBeforeCompile = (shader) => {
             // Vertex-Shader: vUv deklarieren
             shader.vertexShader = 'varying vec2 vUv;\n' + shader.vertexShader;
-
-            // vUv in main setzen
             shader.vertexShader = shader.vertexShader.replace(
                 '#include <uv_vertex>',
                 '#include <uv_vertex>\n vUv = uv;'
@@ -457,7 +368,6 @@ export class GeometryManager {
             );
         };
 
-
         const paintingGeometry = new THREE.PlaneGeometry(width, height);
         const painting = new THREE.Mesh(paintingGeometry, paintingMaterial);
         painting.position.set(position.x, position.y, position.z);
@@ -467,30 +377,21 @@ export class GeometryManager {
         return painting;
     }
 
-
-
-
     createDragonFractal(roomName, wallName, wallHeight = GALLERY_CONFIG.ROOM.WALL_HEIGHT, options = {},
         scaleX, scaleY, scaleZ) {
-        // Fraktal erzeugen
         const dragon = new DragonFractalGeometry(options);
-
-        // Wand holen
         const wall = this.rooms[roomName].walls[wallName];
 
-        //Skalierung
         dragon.scale.set(scaleX, scaleY, scaleZ);
 
-        // Position in Wand-Lokalsystem
-        const wallNormal = new THREE.Vector3(0, 0, 1); //Default
+        // Position im Wand-Lokalsystem
+        const wallNormal = new THREE.Vector3(0, 0, 1);
         const Rotation = wall.rotation.z;
-        wallNormal.applyAxisAngle(new THREE.Vector3(0, 0, 1), Rotation);   //Normale rotieren anhand Ausrichtung des Wand
-        dragon.position.add(wallNormal.multiplyScalar(0.01));    //entlang der Normalen verschieben mit Offset 0.01
+        wallNormal.applyAxisAngle(new THREE.Vector3(0, 0, 1), Rotation);
+        dragon.position.add(wallNormal.multiplyScalar(0.01));
 
-        //Fraktal als Child an Wand anhängen
         wall.add(dragon);
 
-        // Objekt speichern
         this.objects[`dragon_${wallName}`] = dragon;
 
         return dragon;
@@ -510,18 +411,15 @@ export class GeometryManager {
         const carpet = new THREE.Mesh(geometry, material);
         carpet.receiveShadow = true;
 
-        // Auf Boden legen (X/Z-Ebene)
         carpet.position.copy(roomCenter);
-        carpet.position.z += 0.1; // leicht über Boden, kein z-fighting
+        carpet.position.z += 0.1; // Leicht über Boden gegen Z-Fighting
 
         this.rooms['room1'].floor.add(carpet);
         return carpet;
     }
 
-
     /**
-     * Create a pickable cube in the middle of the room
-     * @returns {THREE.Mesh} The pickable cube mesh
+     * Aufhebbaren Würfel erstellen
      */
     createPickableCube() {
         const geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
@@ -534,22 +432,20 @@ export class GeometryManager {
         });
 
         const pickableCube = new THREE.Mesh(geometry, material);
-        pickableCube.position.set(0, 0.4, 0); // Center of room1, sitting on floor
+        pickableCube.position.set(0, 0.4, 0);
         pickableCube.castShadow = true;
         pickableCube.receiveShadow = true;
         pickableCube.name = 'pickableCube';
 
-        // Mark as pickable for raycasting
+        // Als aufhebbar markieren
         pickableCube.userData.isPickable = true;
         pickableCube.userData.isHeld = false;
 
-        // Create bounding box for collision
         pickableCube.BBox = new THREE.Box3().setFromObject(pickableCube);
 
         this.objects.pickableCube = pickableCube;
         this.scene.add(pickableCube);
 
-        // Add subtle glow light
         if (this.lightingManager) {
             this.lightingManager.addEmissiveLight(pickableCube, {
                 color: 0x00ffaa,
@@ -561,9 +457,6 @@ export class GeometryManager {
         return pickableCube;
     }
 
-    /**
-     * Update pickable cube bounding box (call after position change)
-     */
     updatePickableCubeBBox() {
         if (this.objects.pickableCube) {
             this.objects.pickableCube.BBox.setFromObject(this.objects.pickableCube);
@@ -575,15 +468,11 @@ export class GeometryManager {
     }
 
     animateObjects(deltaTime = 0.016) {
-        // Animate persons with deltaTime for smooth animations
         this.personManager.animatePersons(deltaTime);
     }
 
     /**
-     * Generate a procedural stone normal map texture
-     * @param {number} width - Texture width
-     * @param {number} height - Texture height
-     * @returns {THREE.CanvasTexture} The generated normal map
+     * Prozedurale Stein-Normal-Map generieren
      */
     generateStoneNormalMap(width = 512, height = 512) {
         const canvas = document.createElement('canvas');
@@ -591,18 +480,16 @@ export class GeometryManager {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
 
-        // Fill with neutral normal (pointing up: RGB 128, 128, 255)
+        // Neutrale Normale (zeigt nach oben)
         ctx.fillStyle = 'rgb(128, 128, 255)';
         ctx.fillRect(0, 0, width, height);
 
-        // Add stone-like bumps and cracks
         const imageData = ctx.getImageData(0, 0, width, height);
         const data = imageData.data;
 
-        // Create noise-based height map first
         const heightMap = new Float32Array(width * height);
 
-        // Generate multi-octave Perlin-like noise
+        // Multi-Oktaven Rauschen generieren
         for (let octave = 0; octave < 4; octave++) {
             const frequency = Math.pow(2, octave) * 8;
             const amplitude = 1 / Math.pow(2, octave);
@@ -611,7 +498,6 @@ export class GeometryManager {
                 for (let x = 0; x < width; x++) {
                     const nx = x / width * frequency;
                     const ny = y / height * frequency;
-                    // Simple pseudo-random noise
                     const noise = Math.sin(nx * 12.9898 + ny * 78.233) * 43758.5453;
                     const value = (noise - Math.floor(noise)) * amplitude;
                     heightMap[y * width + x] += value;
@@ -619,7 +505,7 @@ export class GeometryManager {
             }
         }
 
-        // Add some crack-like features
+        // Risse hinzufügen
         for (let i = 0; i < 20; i++) {
             let cx = Math.random() * width;
             let cy = Math.random() * height;
@@ -630,8 +516,7 @@ export class GeometryManager {
                 const px = Math.floor(cx);
                 const py = Math.floor(cy);
                 if (px >= 0 && px < width && py >= 0 && py < height) {
-                    heightMap[py * width + px] -= 0.6;  // Deeper cracks
-                    // Widen the crack more
+                    heightMap[py * width + px] -= 0.6;
                     if (px > 0) heightMap[py * width + (px - 1)] -= 0.35;
                     if (px < width - 1) heightMap[py * width + (px + 1)] -= 0.35;
                     if (py > 0) heightMap[(py - 1) * width + px] -= 0.25;
@@ -642,10 +527,9 @@ export class GeometryManager {
             }
         }
 
-        // Convert height map to normal map using Sobel operator
+        // Höhenkarte in Normal-Map umwandeln (Sobel-Operator)
         for (let y = 1; y < height - 1; y++) {
             for (let x = 1; x < width - 1; x++) {
-                // Sobel kernels for gradient
                 const tl = heightMap[(y - 1) * width + (x - 1)];
                 const t = heightMap[(y - 1) * width + x];
                 const tr = heightMap[(y - 1) * width + (x + 1)];
@@ -655,12 +539,10 @@ export class GeometryManager {
                 const b = heightMap[(y + 1) * width + x];
                 const br = heightMap[(y + 1) * width + (x + 1)];
 
-                // Sobel gradients
                 const dX = (tr + 2 * r + br) - (tl + 2 * l + bl);
                 const dY = (bl + 2 * b + br) - (tl + 2 * t + tr);
 
-                // Normalize and convert to RGB
-                const strength = 5.0;  // Increased for more pronounced 3D effect
+                const strength = 5.0;
                 const normalX = -dX * strength;
                 const normalY = -dY * strength;
                 const normalZ = 1.0;
@@ -668,10 +550,10 @@ export class GeometryManager {
                 const len = Math.sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ);
 
                 const idx = (y * width + x) * 4;
-                data[idx] = Math.floor(((normalX / len) * 0.5 + 0.5) * 255); // R
-                data[idx + 1] = Math.floor(((normalY / len) * 0.5 + 0.5) * 255); // G
-                data[idx + 2] = Math.floor(((normalZ / len) * 0.5 + 0.5) * 255); // B
-                data[idx + 3] = 255; // A
+                data[idx] = Math.floor(((normalX / len) * 0.5 + 0.5) * 255);
+                data[idx + 1] = Math.floor(((normalY / len) * 0.5 + 0.5) * 255);
+                data[idx + 2] = Math.floor(((normalZ / len) * 0.5 + 0.5) * 255);
+                data[idx + 3] = 255;
             }
         }
 
@@ -685,29 +567,26 @@ export class GeometryManager {
     }
 
     /**
-     * Create a stone pedestal with normal mapping in Room 2
-     * @param {THREE.Vector3} position - Position for the pedestal
-     * @returns {THREE.Group} The pedestal group
+     * Stein-Podest mit Normal-Mapping erstellen
      */
     createStonePedestal(position = new THREE.Vector3(0, 0, 60)) {
         const pedestalGroup = new THREE.Group();
         pedestalGroup.position.copy(position);
 
-        // Load the normal map texture from file
         const stoneNormalMap = this.textureLoader.load('assets/images/np_carpet.jpg');
         stoneNormalMap.wrapS = THREE.RepeatWrapping;
         stoneNormalMap.wrapT = THREE.RepeatWrapping;
 
-        // Stone material with normal mapping - polished stone look
+        // Stein-Material mit Normal-Mapping
         const stoneMaterial = new THREE.MeshStandardMaterial({
-            color: 0x9a9a90,  // Slightly lighter gray stone
-            roughness: 0.35,  // Polished stone with some reflection
-            metalness: 0.25,  // Subtle metallic sheen
+            color: 0x9a9a90,
+            roughness: 0.35,
+            metalness: 0.25,
             normalMap: stoneNormalMap,
-            normalScale: new THREE.Vector2(3.5, 3.5)  // Strong 3D effect
+            normalScale: new THREE.Vector2(3.5, 3.5)
         });
 
-        // Base of pedestal (wider)
+        // Sockel
         const baseGeometry = new THREE.BoxGeometry(2, 0.4, 2);
         const base = new THREE.Mesh(baseGeometry, stoneMaterial);
         base.position.y = 0.2;
@@ -715,7 +594,7 @@ export class GeometryManager {
         base.receiveShadow = true;
         pedestalGroup.add(base);
 
-        // Column (middle section)
+        // Säule
         const columnGeometry = new THREE.CylinderGeometry(0.6, 0.7, 2.5, 16);
         const column = new THREE.Mesh(columnGeometry, stoneMaterial);
         column.position.y = 1.65;
@@ -723,7 +602,7 @@ export class GeometryManager {
         column.receiveShadow = true;
         pedestalGroup.add(column);
 
-        // Capital (top decorative section)
+        // Kapitell
         const capitalGeometry = new THREE.BoxGeometry(1.6, 0.3, 1.6);
         const capital = new THREE.Mesh(capitalGeometry, stoneMaterial);
         capital.position.y = 3.05;
@@ -731,16 +610,16 @@ export class GeometryManager {
         capital.receiveShadow = true;
         pedestalGroup.add(capital);
 
-        // Decorative sphere on top with balanced reflective material
+        // Dekorative Kugel
         const sphereNormalMap = this.textureLoader.load('assets/images/np_carpet.jpg');
         sphereNormalMap.wrapS = THREE.RepeatWrapping;
         sphereNormalMap.wrapT = THREE.RepeatWrapping;
         const sphereMaterial = new THREE.MeshStandardMaterial({
-            color: 0x3a5868,  // Dark teal
-            roughness: 0.25,  // Smooth but not mirror-like
-            metalness: 0.5,   // Moderate metallic for balanced reflections
+            color: 0x3a5868,
+            roughness: 0.25,
+            metalness: 0.5,
             normalMap: sphereNormalMap,
-            normalScale: new THREE.Vector2(4.0, 4.0)  // Strong 3D effect
+            normalScale: new THREE.Vector2(4.0, 4.0)
         });
 
         const sphereGeometry = new THREE.SphereGeometry(0.5, 32, 32);
@@ -750,11 +629,9 @@ export class GeometryManager {
         sphere.receiveShadow = true;
         pedestalGroup.add(sphere);
 
-        // Store reference and add to scene
         this.objects.stonePedestal = pedestalGroup;
         this.scene.add(pedestalGroup);
 
-        // Add subtle spotlight to highlight the pedestal
         if (this.lightingManager) {
             this.lightingManager.addSpotlight(
                 new THREE.Vector3(position.x, 7, position.z),
@@ -773,4 +650,3 @@ export class GeometryManager {
         return pedestalGroup;
     }
 }
-

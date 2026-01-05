@@ -12,27 +12,26 @@ import { AudioManager } from './modules/audio.js';
 import { PortalManager } from './modules/portal.js';
 
 /**
- * Renderer management class
+ * Renderer-Verwaltung
  */
 class RendererManager {
     constructor() {
         this.renderer = new THREE.WebGLRenderer({
             antialias: GALLERY_CONFIG.RENDERER.ANTIALIAS,
-            stencil: true  // Enable stencil buffer for portal rendering
+            stencil: true
         });
 
         this.setupRenderer();
 
-        // Tone Mapping aktivieren
-        this.renderer.toneMapping = THREE.ACESFilmicToneMapping; // Filmischer Look
-        this.renderer.toneMappingExposure = 1.2;                // Helligkeit
+        // Tone Mapping für filmischen Look
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.2;
     }
 
     setupRenderer() {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setClearColor(GALLERY_CONFIG.RENDERER.BACKGROUND_COLOR, 1);
 
-        // Enable shadows
         if (GALLERY_CONFIG.RENDERER.SHADOWS) {
             this.renderer.shadowMap.enabled = true;
             this.renderer.shadowMap.type = GALLERY_CONFIG.RENDERER.SHADOW_TYPE === 'PCFSoft'
@@ -61,7 +60,7 @@ class RendererManager {
 }
 
 /**
- * Scene management class
+ * Szenen-Verwaltung
  */
 class SceneManager {
     constructor() {
@@ -82,7 +81,7 @@ class SceneManager {
 }
 
 /**
- * Main Gallery Application Class
+ * Haupt-Galerie-Anwendung
  */
 class GalleryApp {
     constructor() {
@@ -98,7 +97,7 @@ class GalleryApp {
     }
 
     /**
-     * Initialize all managers and setup the gallery
+     * Initialisiert alle Manager und die Galerie
      */
     init() {
         try {
@@ -117,18 +116,16 @@ class GalleryApp {
     }
 
     /**
-     * Initialize all core managers
+     * Initialisiert alle Kern-Manager
      */
     initializeManagers() {
         this.managers.scene = new SceneManager();
         this.managers.renderer = new RendererManager();
         this.managers.camera = new CameraManager(this.managers.renderer.getRenderer());
-        //this.managers.lighting = new LightingManager(this.managers.scene.getScene());
-        //this.managers.geometry = new GeometryManager(this.managers.scene.getScene(), this.managers.lighting);
         this.managers.geometry = new GeometryManager(this.managers.scene.getScene());
         this.managers.lighting = new LightingManager(this.managers.scene.getScene());
 
-        // Post-init: beide Manager kennen sich -> keine zyklische Abhängigkeit!!!
+        // Beide Manager verknüpfen
         this.managers.geometry.setLightingManager(this.managers.lighting);
         this.managers.lighting.setGeometryManager(this.managers.geometry);
 
@@ -137,14 +134,12 @@ class GalleryApp {
 
         console.log(this.managers.geometry.objects);
 
-        // Initialize multiplayer manager
         this.managers.multiplayer = new MultiplayerManager(
             this.managers.scene.getScene(),
             this.managers.geometry.getPersonManager(),
             this.managers.camera
         );
 
-        // Initialize portal manager
         if (GALLERY_CONFIG.PORTAL.ENABLED) {
             this.managers.portal = new PortalManager(
                 this.managers.renderer.getRenderer(),
@@ -157,42 +152,31 @@ class GalleryApp {
             );
         }
 
-        // Create local player body for first-person view
         this.createLocalPlayerBody();
     }
 
     /**
-     * Setup connections between managers
+     * Verbindungen zwischen Managern herstellen
      */
     setupManagerConnections() {
-        // Connect camera manager with geometry manager for collision detection
         this.managers.camera.setGeometryManager(this.managers.geometry);
-
-        // Add camera controls to scene (PointerLockControls manages the camera)
         this.managers.scene.add(this.managers.camera.getControls().getObject());
     }
 
     /**
-     * Setup event listeners
+     * Event-Listener einrichten
      */
     setupEventListeners() {
         window.addEventListener('resize', () => this.handleResize());
-
-        // Keyboard shortcuts
         window.addEventListener('keydown', (event) => this.handleGlobalKeyDown(event));
-
-        // Mouse click for picking up/dropping objects
         window.addEventListener('click', (event) => this.handlePickupClick(event));
-
-        // Update multiplayer status periodically
         setInterval(() => this.updateMultiplayerStatus(), 1000);
     }
 
     /**
-     * Handle click for picking up/dropping objects
+     * Klick zum Aufheben/Ablegen von Objekten
      */
     handlePickupClick(event) {
-        // Only handle left click when pointer is locked (in game)
         if (event.button !== 0) return;
         if (!this.managers.camera.getControls().isLocked) return;
 
@@ -201,10 +185,9 @@ class GalleryApp {
     }
 
     /**
-     * Handle global keyboard shortcuts
+     * Globale Tastaturkürzel
      */
     handleGlobalKeyDown(event) {
-        // Pick up / drop object with 'E' key
         if (event.code === 'KeyE' && this.managers.camera.getControls().isLocked) {
             const camera = this.managers.camera.getCamera();
             this.intersect.togglePickup(camera);
@@ -212,7 +195,7 @@ class GalleryApp {
     }
 
     /**
-     * Update multiplayer status in the UI
+     * Multiplayer-Status in der UI aktualisieren
      */
     updateMultiplayerStatus() {
         const statusElement = document.getElementById('multiplayer-status');
@@ -231,7 +214,7 @@ class GalleryApp {
     }
 
     /**
-     * Setup the 3D scene with all objects
+     * 3D-Szene mit allen Objekten aufbauen
      */
     setupScene() {
         this.managers.geometry.createGalleryStructure();
@@ -246,13 +229,12 @@ class GalleryApp {
     }
 
     /**
-     * Create a stone pedestal with normal mapping in Room 2
+     * Stein-Podest mit Normal-Mapping in Raum 2 erstellen
      */
     createStonePedestal() {
-        // Position the pedestal in Room 2 (off to the side so it doesn't block the view)
         const room2Center = GALLERY_CONFIG.LAYOUT.ROOM2_CENTER;
         const pedestalPosition = new THREE.Vector3(
-            room2Center.x + 8,  // Right side of room
+            room2Center.x + 8,
             0,
             room2Center.z
         );
@@ -261,19 +243,15 @@ class GalleryApp {
     }
 
     /**
-     * Create a pickable cube in the middle of the room
+     * Aufhebbaren Würfel erstellen
      */
     createPickableCube() {
         const pickableCube = this.managers.geometry.createPickableCube();
-
-        // Register it with the intersect system
         this.intersect.addPickableObject(pickableCube);
     }
 
     /**
-     * Create a one-way portal in the corridor
-     * The visible portal on the right wall shows a view from the reference point on the left wall,
-     * creating an infinite recursion effect.
+     * Einweg-Portal im Korridor erstellen
      */
     createPortals() {
         if (!this.managers.portal) return;
@@ -282,25 +260,22 @@ class GalleryApp {
         const corridorConfig = GALLERY_CONFIG.CORRIDOR;
         const layoutConfig = GALLERY_CONFIG.LAYOUT;
 
-        // View Portal: Visible portal on the RIGHT wall of the corridor
-        // This is what the player looks INTO
+        // Sichtbares Portal an der rechten Korridorwand
         const viewPortalPosition = new THREE.Vector3(
-            -corridorConfig.WIDTH / 2 + 0.05,      // Right wall, slightly offset inward
-            corridorConfig.WALL_HEIGHT / 2 - 1.5, // Centered vertically, slightly lower
-            layoutConfig.CORRIDOR_CENTER.z    // In the corridor
+            -corridorConfig.WIDTH / 2 + 0.05,
+            corridorConfig.WALL_HEIGHT / 2 - 1.5,
+            layoutConfig.CORRIDOR_CENTER.z
         );
-        const viewPortalRotation = new THREE.Euler(0, Math.PI / 2, 0);  // Facing left into corridor
+        const viewPortalRotation = new THREE.Euler(0, Math.PI / 2, 0);
 
-        // Reference Point: Invisible point on the LEFT wall
-        // This is where the virtual camera view originates FROM
+        // Referenzpunkt an der linken Wand
         const referencePosition = new THREE.Vector3(
-            corridorConfig.WIDTH / 2 - 0.05,     // Left wall
-            corridorConfig.WALL_HEIGHT / 2 - 1.5, // Same height as view portal
-            layoutConfig.CORRIDOR_CENTER.z        // Slightly offset in Z for depth effect
+            corridorConfig.WIDTH / 2 - 0.05,
+            corridorConfig.WALL_HEIGHT / 2 - 1.5,
+            layoutConfig.CORRIDOR_CENTER.z
         );
-        const referenceRotation = new THREE.Euler(0, -Math.PI / 2, 0);  // Facing right into corridor
+        const referenceRotation = new THREE.Euler(0, -Math.PI / 2, 0);
 
-        // Create the visible portal mesh with frame
         const { portalMesh, frameMesh } = this.managers.portal.createViewPortal(
             portalConfig.WIDTH,
             portalConfig.HEIGHT,
@@ -313,20 +288,15 @@ class GalleryApp {
             }
         );
 
-        // Create the invisible reference point
         const referencePoint = this.managers.portal.createReferencePoint(
             referencePosition,
             referenceRotation
         );
 
-        // Add visible elements to scene
         this.managers.scene.add(portalMesh);
         this.managers.scene.add(frameMesh);
-
-        // Set up the one-way portal
         this.managers.portal.setupPortal(portalMesh, referencePoint, frameMesh);
 
-        // Store references
         this.portal = {
             viewPortal: portalMesh,
             frame: frameMesh,
@@ -339,37 +309,31 @@ class GalleryApp {
 
     setupIntersect() {
         this.intersect = new Intersect();
-
-        // Maus-Event für Raycasting
         window.addEventListener('mousemove', (e) => this.intersect.updateMouse(e, this.managers.camera.getCamera()));
     }
 
-    //Objekte hinzufügen -> vllt in intersect
     addIntersectObjects(objects) {
         if (this.intersect)
             this.intersect.setObjects(objects);
     }
-
-
-
 
     setupPostProcessing() {
         const renderer = this.managers.renderer.getRenderer();
         const scene = this.managers.scene.getScene();
         const camera = this.managers.camera.getCamera();
 
-        // Composer nimmt den normalen Renderer als Basis
+        // Composer für Post-Processing Pipeline
         this.composer = new EffectComposer(renderer);
 
-        // RenderPass rendert die Szene normal auf eine interne Textur, statt direkt auf den Bildschirm
+        // RenderPass rendert Szene auf interne Textur
         const renderPass = new RenderPass(scene, camera);
         this.composer.addPass(renderPass);
 
-        // UnrealBloomPass nimmt Ergebnis von RenderPass, berechnet Glow
+        // Bloom-Effekt Parameter
         const bloomParams = {
-            strength: 1.5,  // Stärke des Glows
-            radius: 0.4,    // Weichheit des Glows
-            threshold: 0.85 // ab welcher Helligkeit Glow startet
+            strength: 1.5,
+            radius: 0.4,
+            threshold: 0.85
         };
 
         const bloomPass = new UnrealBloomPass(
@@ -379,12 +343,11 @@ class GalleryApp {
             bloomParams.threshold
         );
 
-        // Pässe werden der Reihe nach ausgeführt, Composer rendert Ergebnis auf Bildschirm
         this.composer.addPass(bloomPass);
     }
 
     createFractal() {
-        //Fraktale erzeugen
+        // Fraktale erzeugen
         this.dragon = this.managers.geometry.createDragonFractal(
             'room2',
             'rightWall',
@@ -405,15 +368,12 @@ class GalleryApp {
     updateFractal(deltaTime) {
         if (!this.dragon || !this.dragon2) return;
 
-        //Zeit aufsummieren
         this.fractalTimer += deltaTime;
 
-        // Nur iterieren, wenn genug Zeit vergangen ist
         if (this.fractalTimer < this.fractalInterval) return;
 
         this.fractalTimer = 0;
 
-        // Abbruch, wenn maxOrder erreicht
         if (this.dragon.fractal.getOrder() >= this.dragon.maxOrder) {
             this.dragon.reset();
             return;
@@ -428,10 +388,9 @@ class GalleryApp {
     }
 
     /**
-     * Create and position artworks in the gallery
+     * Kunstwerke in der Galerie erstellen und positionieren
      */
     createArtworks() {
-        // Room 1 paintings (main gallery room)
         const room1Paintings = [
             {
                 image: 'assets/images/vanGogh.jpg',
@@ -470,7 +429,6 @@ class GalleryApp {
             }
         ];
 
-        // Corridor painting
         const corridorPaintings = [
             {
                 image: 'assets/images/reflection.jpg',
@@ -481,9 +439,6 @@ class GalleryApp {
             }
         ];
 
-        // Room 2 is intentionally left empty
-
-        // Create all paintings
         [...room1Paintings, ...corridorPaintings].forEach((painting, index) => {
             this.managers.geometry.createPainting(
                 painting.image,
@@ -496,7 +451,7 @@ class GalleryApp {
     }
 
     doCarpet() {
-        //Teppich erzeugen
+        // Teppiche erzeugen
         this.carpet = this.managers.geometry.createCarpet(
             new THREE.Vector3(0, 8, 0),
             16,
@@ -520,7 +475,6 @@ class GalleryApp {
     async createAudio() {
         const textureLoader = new THREE.TextureLoader();
 
-        // Textur asynchron laden
         const musicboxTex = await new Promise((resolve, reject) => {
             textureLoader.load(
                 'assets/images/box.jpg',
@@ -537,24 +491,22 @@ class GalleryApp {
         const musicboxGeo = new THREE.BoxGeometry(1, 1, 0.5);
         const musicbox = new THREE.Mesh(musicboxGeo, boxMaterial);
 
-        // Position & Rotation setzen **auf dem Mesh**
         musicbox.position.set(1.35, 0.8, 0);
-        musicbox.rotation.y = Math.PI / 2; // optional 90° drehen
+        musicbox.rotation.y = Math.PI / 2;
 
         this.dragon2.add(musicbox);
 
         this.managers.audio.addPositionalAudio(
             musicbox,
             'assets/audio/background.mp3',
-            true,   // loop
-            0.3,    // volume
-            10      // refDistance
+            true,
+            0.3,
+            10
         );
     }
 
-
-    /**carpet.rotation.x = -Math.PI / 2;
-     * Start the animation loop
+    /**
+     * Animationsschleife starten
      */
     start() {
         if (this.isRunning) return;
@@ -564,14 +516,14 @@ class GalleryApp {
     }
 
     /**
-     * Stop the animation loop
+     * Animationsschleife stoppen
      */
     stop() {
         this.isRunning = false;
     }
 
     /**
-     * Main animation loop
+     * Haupt-Animationsschleife
      */
     animate(currentTime = 0) {
         if (!this.isRunning) return;
@@ -587,27 +539,24 @@ class GalleryApp {
     }
 
     /**
-     * Update held object position to follow camera and physics
+     * Gehaltenes Objekt aktualisieren
      */
     updateHeldObject(deltaTime) {
         const camera = this.managers.camera.getCamera();
 
         if (this.intersect) {
-            // Update crosshair color feedback
             this.intersect.updateCrosshairFeedback(camera);
 
-            // Update held object position
             if (this.intersect.isHoldingObject()) {
                 this.intersect.updateHeldObject(camera);
             }
 
-            // Update physics (gravity) for pickable objects
             this.intersect.updatePhysics(deltaTime);
         }
     }
 
     /**
-     * Calculate delta time for smooth animations
+     * Delta-Zeit für flüssige Animationen berechnen
      */
     calculateDeltaTime(currentTime) {
         const deltaTime = this.lastTime === 0 ? 0 : (currentTime - this.lastTime) / 1000;
@@ -617,16 +566,12 @@ class GalleryApp {
 
 
     /**
-     * Update all scene elements
+     * Alle Szenen-Elemente aktualisieren
      */
     updateScene(deltaTime, currentTime) {
-        // Update camera controls with delta time for smooth movement
         this.managers.camera.update(deltaTime);
-
-        // Update local player body to follow camera
         this.updateLocalPlayerBody(deltaTime);
 
-        // Send multiplayer movement updates
         if (this.managers.multiplayer && this.managers.multiplayer.isMultiplayerConnected()) {
             const cameraPosition = this.managers.camera.getPosition();
             const cameraRotation = this.managers.camera.getRotation();
@@ -635,7 +580,7 @@ class GalleryApp {
     }
 
     /**
-     * Update shader uniforms for time-based animations (for future use)
+     * Shader-Uniforms für zeitbasierte Animationen aktualisieren
      */
     updateShaderUniforms(currentTime) {
         for (const obj of Object.values(this.managers.geometry.objects)) {
@@ -646,17 +591,14 @@ class GalleryApp {
     }
 
     renderScene() {
-        // Check if portal rendering is enabled and we have a portal configured
         const usePortalRendering = this.managers.portal &&
             this.managers.portal.enabled &&
             this.managers.portal.hasPortal();
 
         if (usePortalRendering) {
-            // Portal rendering handles its own scene rendering
-            // Note: Portal rendering bypasses bloom composer for stencil buffer handling
             this.managers.portal.render();
         } else if (this.composer) {
-            this.composer.render(); // Composer rendert jetzt mit Bloom
+            this.composer.render();
         } else {
             this.managers.renderer.render(
                 this.managers.scene.getScene(),
@@ -673,7 +615,7 @@ class GalleryApp {
         this.managers.renderer.getRenderer().autoClear = true;
     }
 
-    //Composer rendert in eigenen Texturen, bei Änderungen der Fenstergröße neu setzen -> sonst Glow verzerrt
+    // Bei Fenstergrößenänderung Composer-Texturen neu setzen
     handleResize() {
         const width = window.innerWidth;
         const height = window.innerHeight;
@@ -688,16 +630,12 @@ class GalleryApp {
 
 
     /**
-     * Create local player body for first-person view
-     * Uses the full PersonManager model for consistency with remote players
-     * Head is visible from external views (portals) but not from first-person using layers
+     * Lokalen Spielerkörper für First-Person-Ansicht erstellen
      */
     createLocalPlayerBody() {
         const personManager = this.managers.geometry.getPersonManager();
         const cameraPos = this.managers.camera.getPosition();
 
-        // Create a full person model using PersonManager
-        // Person group offset adjusted for scale 1.15 (taller player)
         const playerScale = 1.15;
         const personGroupGroundOffset = -0.23 * playerScale;
 
@@ -705,20 +643,16 @@ class GalleryApp {
             new THREE.Vector3(cameraPos.x, personGroupGroundOffset, cameraPos.z),
             {
                 name: 'localPlayer',
-                clothingColor: 0x4169e1, // Blue clothing
+                clothingColor: 0x4169e1,
                 scale: playerScale
             }
         );
 
-        // Use layer 1 for head parts - visible from external views (portals) but not first-person
-        // Layer 0 = default (main camera sees this)
-        // Layer 1 = external view only (portal camera sees this, main camera doesn't)
+        // Layer 1 für Kopfteile - sichtbar aus externen Ansichten (Portale)
         const EXTERNAL_VIEW_LAYER = 1;
 
-        // Configure main camera to NOT see layer 1 (head parts)
         this.managers.camera.getCamera().layers.disable(EXTERNAL_VIEW_LAYER);
 
-        // Move head, hair, and eyes to layer 1 (external view only)
         const bodyParts = this.localPlayerBody.bodyParts;
         if (bodyParts) {
             if (bodyParts.head) {
@@ -735,11 +669,7 @@ class GalleryApp {
             }
         }
 
-        // Remove the person from scene (PersonManager adds it automatically)
-        // We'll manage its position manually to follow the camera
         this.managers.scene.getScene().remove(this.localPlayerBody);
-
-        // Re-add to scene (not attached to camera, we update position manually)
         this.managers.scene.add(this.localPlayerBody);
 
         console.log('Local player body created with full model (head on layer 1 - visible from portals only)');
@@ -748,7 +678,7 @@ class GalleryApp {
 
 
     /**
-     * Update local player body to follow camera movement and animate walking
+     * Lokalen Spielerkörper mit Kamerabewegung synchronisieren und Laufanimation
      */
     updateLocalPlayerBody(deltaTime) {
         if (!this.localPlayerBody) return;
@@ -757,52 +687,41 @@ class GalleryApp {
         const cameraKeys = this.managers.camera.keys;
         const jumpState = this.managers.camera.jumpState;
 
-        // Person group ground offset (feet on ground when camera at Y=1.6)
-        // Adjusted for taller player (scale 1.15)
         const playerScale = 1.15;
-        const personGroupGroundOffset = -0.2 * playerScale; // -0.23
+        const personGroupGroundOffset = -0.2 * playerScale;
         const cameraHeight = 1.7;
 
-        // Get camera direction to offset body backward from camera
         const direction = this.managers.camera.getWorldDirection();
         const yRotation = Math.atan2(direction.x, direction.z);
 
-        // Offset body backward from camera position (camera is in front of body)
-        // Use yRotation instead of direction vector so offset is independent of vertical look angle
-        const bodyOffset = 0.25; // How far behind the camera the body center is
+        const bodyOffset = 0.25;
         const offsetX = -Math.sin(yRotation) * bodyOffset;
         const offsetZ = -Math.cos(yRotation) * bodyOffset;
 
-        // Update position to follow camera with offset
         this.localPlayerBody.position.x = cameraPos.x + offsetX;
         this.localPlayerBody.position.z = cameraPos.z + offsetZ;
 
-        // Calculate Y position: account for jumping
         const jumpHeight = Math.max(0, cameraPos.y - cameraHeight);
         this.localPlayerBody.position.y = personGroupGroundOffset + jumpHeight;
 
-        // Update rotation to match camera direction
         this.localPlayerBody.rotation.y = yRotation;
 
-        // Detect if player is moving based on key input
         const isMoving = cameraKeys.forward || cameraKeys.backward || cameraKeys.left || cameraKeys.right;
         const isJumping = jumpState.isJumping;
 
-        // Get body parts (using PersonManager's structure)
         const bodyParts = this.localPlayerBody.bodyParts;
         if (!bodyParts) return;
 
         const animState = this.localPlayerBody.animationState;
         if (!animState) return;
 
-        // Update walking animation
+        // Laufanimation
         if (isMoving && !isJumping) {
             animState.isWalking = true;
-            animState.walkCycle += deltaTime * 8; // Faster walk cycle for more visible animation
+            animState.walkCycle += deltaTime * 8;
 
-            const legSwing = Math.sin(animState.walkCycle) * 0.5; // Larger leg swing
+            const legSwing = Math.sin(animState.walkCycle) * 0.5;
 
-            // Animate legs (using PersonManager's leg structure)
             if (bodyParts.legs && bodyParts.legs.leftLeg) {
                 bodyParts.legs.leftLeg.rotation.x = THREE.MathUtils.lerp(
                     bodyParts.legs.leftLeg.rotation.x,
@@ -819,7 +738,6 @@ class GalleryApp {
                 );
             }
 
-            // Animate arms (opposite to legs for natural walking)
             const armSwing = Math.sin(animState.walkCycle) * 0.3;
             if (bodyParts.arms && bodyParts.arms.leftArm) {
                 bodyParts.arms.leftArm.rotation.x = THREE.MathUtils.lerp(
@@ -836,7 +754,6 @@ class GalleryApp {
                 );
             }
 
-            // Subtle torso sway for more natural walking
             if (bodyParts.torso) {
                 const torsoSway = Math.sin(animState.walkCycle * 0.5) * 0.03;
                 bodyParts.torso.rotation.z = THREE.MathUtils.lerp(
@@ -846,7 +763,7 @@ class GalleryApp {
                 );
             }
         } else if (!isJumping) {
-            // Return to neutral position when not walking
+            // Zurück zur Neutralposition
             animState.isWalking = false;
             animState.walkCycle = 0;
 
@@ -881,7 +798,6 @@ class GalleryApp {
                 );
             }
 
-            // Reset torso sway
             if (bodyParts.torso) {
                 bodyParts.torso.rotation.z = THREE.MathUtils.lerp(
                     bodyParts.torso.rotation.z,
@@ -891,9 +807,8 @@ class GalleryApp {
             }
         }
 
-        // Handle jumping animation
+        // Sprunganimation
         if (isJumping) {
-            // Bring legs up during jump
             if (bodyParts.legs && bodyParts.legs.leftLeg) {
                 bodyParts.legs.leftLeg.rotation.x = THREE.MathUtils.lerp(
                     bodyParts.legs.leftLeg.rotation.x,
@@ -910,7 +825,6 @@ class GalleryApp {
                 );
             }
 
-            // Slight forward body lean
             if (bodyParts.torso) {
                 bodyParts.torso.rotation.x = THREE.MathUtils.lerp(
                     bodyParts.torso.rotation.x,
@@ -919,7 +833,6 @@ class GalleryApp {
                 );
             }
         } else {
-            // Reset torso lean
             if (bodyParts.torso) {
                 bodyParts.torso.rotation.x = THREE.MathUtils.lerp(
                     bodyParts.torso.rotation.x,
@@ -929,8 +842,9 @@ class GalleryApp {
             }
         }
     }
+
     /**
-     * Get access to managers for debugging or extensions
+     * Zugriff auf Manager für Debugging oder Erweiterungen
      */
     getManagers() {
         return this.managers;
@@ -941,10 +855,9 @@ class GalleryApp {
 
 
 
-// Initialize the gallery when the page loads
+// Galerie beim Laden der Seite initialisieren
 document.addEventListener('DOMContentLoaded', () => {
     window.galleryApp = new GalleryApp();
 });
 
-// Export for potential module usage
 export default GalleryApp;

@@ -15,23 +15,22 @@ const io = socketIo(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(cors());
 app.use(express.static(path.join(__dirname, '3D_gallery')));
 
-// Store connected players
+// Verbundene Spieler speichern
 const players = new Map();
 
-// Serve the main gallery page
+// Haupt-Galerie-Seite ausliefern
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '3D_gallery', 'index.html'));
 });
 
-// WebSocket connection handling
+// WebSocket-Verbindungen
 io.on('connection', (socket) => {
     console.log(`Player connected: ${socket.id}`);
 
-    // Handle player join
+    // Spieler tritt bei
     socket.on('player-join', (playerData) => {
         const player = {
             id: socket.id,
@@ -44,24 +43,23 @@ io.on('connection', (socket) => {
 
         players.set(socket.id, player);
 
-        // Send current player list to the new player
+        // Spielerliste an neuen Spieler senden
         socket.emit('players-list', Array.from(players.values()));
 
-        // Notify all other players about the new player
+        // Andere Spieler informieren
         socket.broadcast.emit('player-joined', player);
 
         console.log(`Player ${player.name} joined the gallery`);
     });
 
-    // Handle player movement
+    // Spielerbewegung
     socket.on('player-move', (movementData) => {
         const player = players.get(socket.id);
         if (player) {
-            // Update player position and rotation
             player.position = movementData.position;
             player.rotation = movementData.rotation;
 
-            // Broadcast movement to all other players
+            // Bewegung an andere Spieler senden
             socket.broadcast.emit('player-moved', {
                 id: socket.id,
                 position: player.position,
@@ -70,19 +68,18 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Handle player disconnect
+    // Spieler verlässt
     socket.on('disconnect', () => {
         const player = players.get(socket.id);
         if (player) {
             console.log(`Player ${player.name} disconnected`);
             players.delete(socket.id);
 
-            // Notify all players about the disconnection
             socket.broadcast.emit('player-left', socket.id);
         }
     });
 
-    // Handle chat messages (optional feature)
+    // Chat-Nachrichten
     socket.on('chat-message', (messageData) => {
         const player = players.get(socket.id);
         if (player) {
@@ -93,36 +90,35 @@ io.on('connection', (socket) => {
                 timestamp: Date.now()
             };
 
-            // Broadcast message to all players
             io.emit('chat-message', message);
         }
     });
 });
 
-// Generate random color for new players
+// Zufällige Farbe generieren
 function generateRandomColor() {
     const colors = [
-        0xff6b6b, // Red
-        0x4ecdc4, // Teal
-        0x45b7d1, // Blue
-        0x96ceb4, // Green
-        0xfeca57, // Yellow
-        0xff9ff3, // Pink
-        0x54a0ff, // Light Blue
-        0x5f27cd, // Purple
-        0x00d2d3, // Cyan
-        0xff9f43  // Orange
+        0xff6b6b,
+        0x4ecdc4,
+        0x45b7d1,
+        0x96ceb4,
+        0xfeca57,
+        0xff9ff3,
+        0x54a0ff,
+        0x5f27cd,
+        0x00d2d3,
+        0xff9f43
     ];
     return colors[Math.floor(Math.random() * colors.length)];
 }
 
-// Start server
+// Server starten
 server.listen(PORT, () => {
     console.log(`🚀 3D Gallery server running on http://localhost:${PORT}`);
     console.log(`📱 Open multiple browser tabs to test multiplayer functionality`);
 });
 
-// Graceful shutdown
+// Graceful Shutdown
 process.on('SIGINT', () => {
     console.log('\n🛑 Shutting down server...');
     server.close(() => {
