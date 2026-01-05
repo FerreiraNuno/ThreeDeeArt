@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 
 /**
- * Portal System Implementation
- * Based on the OpenGL stencil buffer technique ported to Three.js
+ * Simplified One-Way Portal System
  * 
- * The approach:
- * 1. Write portal shape into stencil buffer
- * 2. Render scene from virtual camera only where stencil passes
- * 3. Restore normal rendering
- * 4. Recurse by incrementing stencil value each level
+ * This creates an infinite recursion effect using:
+ * - A visible "view portal" (the frame you look into)
+ * - An invisible "reference point" (where the virtual camera is positioned)
+ * 
+ * The view portal shows what would be seen from the reference point,
+ * creating the illusion of looking through to another location.
  */
 
 // Reusable math objects to avoid allocations
@@ -21,29 +21,27 @@ const _q = new THREE.Vector4();
 const _c = new THREE.Vector4();
 const _invProj = new THREE.Matrix4();
 const _tempVec3 = new THREE.Vector3();
-const _tempNormal = new THREE.Vector3();
 
 /**
- * Compute the virtual camera pose for viewing through a portal
+ * Compute the virtual camera pose for viewing through the portal
  * 
- * The transform is: dstPortal * rotate(180°) * inverse(srcPortal) * mainCamera
- * This positions the camera as if stepping through srcPortal and emerging from dstPortal
+ * The transform positions the camera as if stepping through the view portal
+ * and looking out from the reference point.
  * 
  * @param {THREE.Camera} mainCamera - The main scene camera
- * @param {THREE.Object3D} srcPortal - Source portal mesh (the one being looked through)
- * @param {THREE.Object3D} dstPortal - Destination portal mesh (where we see the view from)
+ * @param {THREE.Object3D} viewPortal - The visible portal mesh (what you look into)
+ * @param {THREE.Object3D} referencePoint - The reference object (where view originates)
  * @param {THREE.PerspectiveCamera} portalCamera - Camera to update with portal view
  */
-export function updatePortalCamera(mainCamera, srcPortal, dstPortal, portalCamera) {
-    srcPortal.updateMatrixWorld(true);
-    dstPortal.updateMatrixWorld(true);
+function updatePortalCamera(mainCamera, viewPortal, referencePoint, portalCamera) {
+    viewPortal.updateMatrixWorld(true);
+    referencePoint.updateMatrixWorld(true);
     mainCamera.updateMatrixWorld(true);
 
-    // Build the transformation matrix:
-    // dst * rot180 * inv(src) * mainCamera
-    _m.copy(dstPortal.matrixWorld);
+    // Build transformation: reference * rot180 * inv(viewPortal) * mainCamera
+    _m.copy(referencePoint.matrixWorld);
     _m.multiply(_rotY180);
-    _m.multiply(_mInv.copy(srcPortal.matrixWorld).invert());
+    _m.multiply(_mInv.copy(viewPortal.matrixWorld).invert());
     _m.multiply(mainCamera.matrixWorld);
 
     // Apply to portal camera
@@ -61,16 +59,15 @@ export function updatePortalCamera(mainCamera, srcPortal, dstPortal, portalCamer
 }
 
 /**
- * Apply oblique near-plane clipping to prevent rendering behind the portal
- * This modifies the projection matrix so the near plane aligns with the portal surface
+ * Apply oblique near-plane clipping to prevent rendering behind the reference point
  * 
  * @param {THREE.PerspectiveCamera} portalCamera - The portal view camera
- * @param {THREE.Plane} portalPlaneWorld - The destination portal plane in world space
+ * @param {THREE.Plane} referencePlane - The reference plane in world space
  */
-export function applyObliqueClipping(portalCamera, portalPlaneWorld) {
+function applyObliqueClipping(portalCamera, referencePlane) {
     portalCamera.updateMatrixWorld(true);
 
-    _clipPlaneWorld.copy(portalPlaneWorld);
+    _clipPlaneWorld.copy(referencePlane);
 
     // Transform plane to camera space
     const viewMatrix = portalCamera.matrixWorldInverse;
@@ -107,165 +104,27 @@ export function applyObliqueClipping(portalCamera, portalPlaneWorld) {
 }
 
 /**
- * Get the portal plane in world space (facing outward from portal surface)
- * Assumes portal mesh is a plane with local +Z as the normal
+ * Get a plane in world space from an Object3D
+ * Assumes the object's local +Z is the normal direction
  * 
- * @param {THREE.Object3D} portalMesh - The portal mesh
- * @returns {THREE.Plane} The portal plane in world space
+ * @param {THREE.Object3D} object - The object to get plane from
+ * @returns {THREE.Plane}
  */
-export function getPortalPlane(portalMesh) {
+function getPlaneFromObject(object) {
     const plane = new THREE.Plane();
     const normal = new THREE.Vector3(0, 0, 1)
-        .applyQuaternion(portalMesh.quaternion)
+        .applyQuaternion(object.quaternion)
         .normalize();
 
-    portalMesh.getWorldPosition(_tempVec3);
+    object.getWorldPosition(_tempVec3);
     plane.setFromNormalAndCoplanarPoint(normal, _tempVec3);
 
     return plane;
 }
 
 /**
- * Create a material that writes to stencil buffer without affecting color/depth
- * This is used to mark portal pixels in the stencil buffer
- * 
- * @param {number} stencilRef - The stencil reference value for this recursion level
- * @returns {THREE.MeshBasicMaterial} Material configured for stencil writing
- */
-export function createPortalStencilWriterMaterial(stencilRef) {
-    const material = new THREE.MeshBasicMaterial({
-        colorWrite: false,
-        depthWrite: false
-    });
-
-    material.stencilWrite = true;
-    material.stencilRef = stencilRef;
-    material.stencilFunc = THREE.AlwaysStencilFunc;
-    material.stencilFail = THREE.IncrementWrapStencilOp;
-    material.stencilZFail = THREE.IncrementWrapStencilOp;
-    material.stencilZPass = THREE.IncrementWrapStencilOp;
-
-    return material;
-}
-
-/**
- * Create a material that tests against stencil buffer for portal view rendering
- * 
- * @param {THREE.Material} baseMaterial - Original material to clone
- * @param {number} stencilRef - The stencil reference value to test against
- * @returns {THREE.Material} Material configured for stencil testing
- */
-export function createPortalStencilTestMaterial(baseMaterial, stencilRef) {
-    const material = baseMaterial.clone();
-
-    material.stencilWrite = true;
-    material.stencilRef = stencilRef;
-    material.stencilFunc = THREE.LessEqualStencilFunc;
-    material.stencilFail = THREE.KeepStencilOp;
-    material.stencilZFail = THREE.KeepStencilOp;
-    material.stencilZPass = THREE.KeepStencilOp;
-
-    return material;
-}
-
-/**
- * Create a depth-only material for the portal frame depth write step
- * 
- * @returns {THREE.MeshBasicMaterial} Material that only writes to depth buffer
- */
-export function createDepthOnlyMaterial() {
-    const material = new THREE.MeshBasicMaterial({
-        colorWrite: false,
-        depthWrite: true
-    });
-    return material;
-}
-
-/**
- * Portal pair definition
- */
-export class Portal {
-    /**
-     * Create a portal
-     * @param {THREE.Mesh} mesh - The portal surface mesh (should be a plane)
-     * @param {Portal} linkedPortal - The destination portal (set after both are created)
-     * @param {Object} options - Portal options
-     */
-    constructor(mesh, linkedPortal = null, options = {}) {
-        this.mesh = mesh;
-        this.linkedPortal = linkedPortal;
-        this.enabled = options.enabled !== false;
-        this.renderLayer = options.renderLayer || 0;
-
-        // Store original material for restoration
-        this.originalMaterial = mesh.material;
-
-        // Create stencil materials cache
-        this.stencilWriterMaterials = new Map();
-
-        // Ensure mesh has proper matrix
-        this.mesh.updateMatrixWorld(true);
-    }
-
-    /**
-     * Link this portal to another portal
-     * @param {Portal} portal - The destination portal
-     */
-    linkTo(portal) {
-        this.linkedPortal = portal;
-    }
-
-    /**
-     * Get the portal plane in world space
-     * @returns {THREE.Plane}
-     */
-    getPlane() {
-        return getPortalPlane(this.mesh);
-    }
-
-    /**
-     * Get or create a stencil writer material for a given recursion level
-     * @param {number} level - Recursion level
-     * @returns {THREE.Material}
-     */
-    getStencilWriterMaterial(level) {
-        if (!this.stencilWriterMaterials.has(level)) {
-            this.stencilWriterMaterials.set(level, createPortalStencilWriterMaterial(level));
-        }
-        return this.stencilWriterMaterials.get(level);
-    }
-
-    /**
-     * Get world position of the portal
-     * @returns {THREE.Vector3}
-     */
-    getWorldPosition() {
-        return this.mesh.getWorldPosition(new THREE.Vector3());
-    }
-
-    /**
-     * Check if a point is in front of the portal
-     * @param {THREE.Vector3} point - Point to check
-     * @returns {boolean}
-     */
-    isPointInFront(point) {
-        const plane = this.getPlane();
-        return plane.distanceToPoint(point) > 0;
-    }
-
-    /**
-     * Dispose of cached materials
-     */
-    dispose() {
-        for (const material of this.stencilWriterMaterials.values()) {
-            material.dispose();
-        }
-        this.stencilWriterMaterials.clear();
-    }
-}
-
-/**
- * Portal Manager - handles all portal rendering
+ * One-Way Portal Manager
+ * Handles rendering a single portal view with recursive depth
  */
 export class PortalManager {
     /**
@@ -283,93 +142,54 @@ export class PortalManager {
         // Configuration
         this.recursionDepth = options.recursionDepth || 3;
         this.enabled = options.enabled !== false;
-        this.debugMode = options.debugMode || false;
 
-        // Portal collection
-        this.portals = [];
-        this.portalPairs = [];
+        // Portal data (single one-way portal)
+        this.viewPortal = null;        // The visible portal mesh
+        this.referencePoint = null;    // The reference point Object3D
+        this.frameMesh = null;         // Optional frame mesh
 
         // Create portal cameras for each recursion level
-        // We need separate cameras because each level has different transforms
         this.portalCameras = [];
         for (let i = 0; i < this.recursionDepth; i++) {
             const cam = new THREE.PerspectiveCamera();
             cam.layers.enableAll();
             this.portalCameras.push(cam);
         }
-        // Keep legacy reference for compatibility
-        this.portalCamera = this.portalCameras[0];
 
-        // Helper scene for rendering just portal meshes (for stencil writes)
+        // Helper scene for stencil writes
         this.helperScene = new THREE.Scene();
 
-        // Depth-only material for frame depth write
-        this.depthOnlyMaterial = createDepthOnlyMaterial();
-
-        // Track objects to exclude from portal rendering
-        this.excludedObjects = new Set();
-
-        // Stencil state tracking
-        this.stencilEnabled = false;
-
         // Ensure stencil buffer is available
-        this._ensureStencilBuffer();
+        this._checkStencilBuffer();
     }
 
     /**
-     * Ensure renderer has stencil buffer enabled
+     * Check if stencil buffer is available
      * @private
      */
-    _ensureStencilBuffer() {
-        // Check if context has stencil
+    _checkStencilBuffer() {
         const gl = this.renderer.getContext();
-        const contextAttributes = gl.getContextAttributes();
-        if (!contextAttributes.stencil) {
-            console.warn('PortalManager: WebGL context does not have stencil buffer. Portals may not render correctly.');
+        const attrs = gl.getContextAttributes();
+        if (!attrs.stencil) {
+            console.warn('PortalManager: WebGL context missing stencil buffer');
         }
     }
 
     /**
-     * Create a portal pair (two linked portals)
-     * @param {THREE.Mesh} meshA - First portal mesh
-     * @param {THREE.Mesh} meshB - Second portal mesh
-     * @param {Object} options - Portal options
-     * @returns {Object} Object containing both portals
-     */
-    createPortalPair(meshA, meshB, options = {}) {
-        const portalA = new Portal(meshA, null, options);
-        const portalB = new Portal(meshB, null, options);
-
-        // Link portals to each other
-        portalA.linkTo(portalB);
-        portalB.linkTo(portalA);
-
-        // Add to collections
-        this.portals.push(portalA, portalB);
-        this.portalPairs.push({ portalA, portalB });
-
-        // Exclude portal meshes from normal rendering order issues
-        this.excludedObjects.add(meshA);
-        this.excludedObjects.add(meshB);
-
-        return { portalA, portalB };
-    }
-
-    /**
-     * Create a portal mesh with a frame
+     * Create the view portal mesh (the visible portal frame)
      * @param {number} width - Portal width
      * @param {number} height - Portal height
      * @param {THREE.Vector3} position - Portal position
      * @param {THREE.Euler} rotation - Portal rotation
      * @param {Object} options - Visual options
-     * @returns {Object} Object containing portal mesh and frame mesh
+     * @returns {Object} Object containing portalMesh and frameMesh
      */
-    createPortalMesh(width, height, position, rotation, options = {}) {
+    createViewPortal(width, height, position, rotation, options = {}) {
         const portalColor = options.portalColor || 0x00aaff;
         const frameColor = options.frameColor || 0x333333;
         const frameWidth = options.frameWidth || 0.15;
 
-        // Create portal surface (the actual portal)
+        // Create portal surface
         const portalGeometry = new THREE.PlaneGeometry(width, height);
         const portalMaterial = new THREE.MeshBasicMaterial({
             color: portalColor,
@@ -382,21 +202,19 @@ export class PortalManager {
         portalMesh.position.copy(position);
         portalMesh.rotation.copy(rotation);
 
-        // Create frame around portal
+        // Create frame
         const frameShape = new THREE.Shape();
         const outerW = width / 2 + frameWidth;
         const outerH = height / 2 + frameWidth;
         const innerW = width / 2;
         const innerH = height / 2;
 
-        // Outer rectangle
         frameShape.moveTo(-outerW, -outerH);
         frameShape.lineTo(outerW, -outerH);
         frameShape.lineTo(outerW, outerH);
         frameShape.lineTo(-outerW, outerH);
         frameShape.lineTo(-outerW, -outerH);
 
-        // Inner hole
         const hole = new THREE.Path();
         hole.moveTo(-innerW, -innerH);
         hole.lineTo(-innerW, innerH);
@@ -415,81 +233,63 @@ export class PortalManager {
         const frameMesh = new THREE.Mesh(frameGeometry, frameMaterial);
         frameMesh.position.copy(position);
         frameMesh.rotation.copy(rotation);
-        // Slightly offset frame to prevent z-fighting
-        frameMesh.position.add(
-            new THREE.Vector3(0, 0, 0.01).applyEuler(rotation)
-        );
+        // Slight offset to prevent z-fighting
+        frameMesh.position.add(new THREE.Vector3(0, 0, 0.01).applyEuler(rotation));
 
         return { portalMesh, frameMesh };
     }
 
     /**
-     * Add a portal to the scene
-     * @param {Portal} portal - Portal to add
+     * Create a reference point (invisible, just defines where the view originates)
+     * @param {THREE.Vector3} position - Reference position
+     * @param {THREE.Euler} rotation - Reference rotation (determines view direction)
+     * @returns {THREE.Object3D} The reference point object
      */
-    addPortalToScene(portal) {
-        this.scene.add(portal.mesh);
+    createReferencePoint(position, rotation) {
+        const ref = new THREE.Object3D();
+        ref.position.copy(position);
+        ref.rotation.copy(rotation);
+        ref.updateMatrixWorld(true);
+        return ref;
     }
 
     /**
-     * Render the scene with portals
-     * This replaces the normal render call when portals are present
-     * Uses Three.js state management for proper stencil buffer handling
+     * Set up the one-way portal
+     * @param {THREE.Mesh} viewPortalMesh - The visible portal mesh
+     * @param {THREE.Object3D} referencePoint - The reference point
+     * @param {THREE.Mesh} frameMesh - Optional frame mesh
      */
-    render() {
-        if (!this.enabled || this.portals.length === 0) {
-            this.renderer.render(this.scene, this.mainCamera);
-            return;
-        }
+    setupPortal(viewPortalMesh, referencePoint, frameMesh = null) {
+        this.viewPortal = viewPortalMesh;
+        this.referencePoint = referencePoint;
+        this.frameMesh = frameMesh;
+        this.originalMaterial = viewPortalMesh.material;
 
-        const gl = this.renderer.getContext();
-        const state = this.renderer.state;
+        // Add reference point to scene (invisible, just for transforms)
+        this.scene.add(referencePoint);
+    }
 
-        // Disable auto clear - we'll manage clearing ourselves
-        this.renderer.autoClear = false;
+    /**
+     * Check if camera is in front of the view portal
+     * @param {THREE.Vector3} point - Point to check
+     * @returns {boolean}
+     */
+    isPointInFrontOfPortal(point) {
+        const plane = getPlaneFromObject(this.viewPortal);
+        return plane.distanceToPoint(point) > 0;
+    }
 
-        // Initial clear of all buffers
-        this.renderer.clear(true, true, true);
-
-        // Process each portal visible to the main camera
-        for (const portal of this.portals) {
-            if (!portal.enabled || !portal.linkedPortal) continue;
-
-            // Only render portal if viewer is in front of it
-            const cameraPos = this.mainCamera.position;
-            if (!portal.isPointInFront(cameraPos)) continue;
-
-            this._renderPortalWithMaterialStencil(portal, 0);
-        }
-
-        // Final render of main scene where stencil is 0 (not covered by portals)
-        // First, set stencil test on all scene materials
-        this._setSceneStencilTest(0, THREE.EqualStencilFunc);
-
-        // Hide portal meshes during final render to show portal views behind them
-        for (const portal of this.portals) {
-            portal.mesh.visible = false;
-        }
-
-        this.renderer.render(this.scene, this.mainCamera);
-
-        // Restore portal mesh visibility
-        for (const portal of this.portals) {
-            portal.mesh.visible = true;
-        }
-
-        // Reset stencil on all materials
-        this._clearSceneStencilTest();
-
-        // Restore auto clear
-        this.renderer.autoClear = true;
+    /**
+     * Get the reference plane (for oblique clipping)
+     * @returns {THREE.Plane}
+     */
+    getReferencePlane() {
+        return getPlaneFromObject(this.referencePoint);
     }
 
     /**
      * Set stencil test on all scene materials
      * @private
-     * @param {number} ref - Stencil reference value
-     * @param {number} func - Stencil function (THREE.EqualStencilFunc, etc.)
      */
     _setSceneStencilTest(ref, func) {
         this.scene.traverse((obj) => {
@@ -523,100 +323,65 @@ export class PortalManager {
     }
 
     /**
-     * Render a portal using Three.js material stencil properties
-     * This approach properly respects Three.js's state management
+     * Render a single recursion level of the portal
      * @private
-     * @param {Portal} portal - Portal to render
-     * @param {number} level - Current recursion level
-     * @param {THREE.Camera} viewCamera - The camera from which this portal is being viewed
      */
-    _renderPortalWithMaterialStencil(portal, level, viewCamera = null) {
+    _renderPortalLevel(level, viewCamera) {
         if (level >= this.recursionDepth) return;
+        if (!this.viewPortal || !this.referencePoint) return;
 
-        // Use main camera for level 0, otherwise use the passed view camera
-        const currentViewCamera = viewCamera || this.mainCamera;
-        const destPortal = portal.linkedPortal;
         const stencilRef = level + 1;
-
-        // Get portal camera for this recursion level
         const portalCam = this.portalCameras[level];
 
         // Step 1: Write portal shape to stencil buffer
-        // Create a stencil writer material that increments stencil where portal is visible
         const stencilWriterMat = new THREE.MeshBasicMaterial({
             colorWrite: false,
             depthWrite: false
         });
         stencilWriterMat.stencilWrite = true;
         stencilWriterMat.stencilRef = level;
-        stencilWriterMat.stencilFunc = THREE.EqualStencilFunc;  // Only write where stencil == level
+        stencilWriterMat.stencilFunc = THREE.EqualStencilFunc;
         stencilWriterMat.stencilFail = THREE.KeepStencilOp;
         stencilWriterMat.stencilZFail = THREE.KeepStencilOp;
-        stencilWriterMat.stencilZPass = THREE.IncrementWrapStencilOp;  // Increment on pass
+        stencilWriterMat.stencilZPass = THREE.IncrementWrapStencilOp;
 
-        const originalMaterial = portal.mesh.material;
-        portal.mesh.material = stencilWriterMat;
-        portal.mesh.visible = true;
+        this.viewPortal.material = stencilWriterMat;
+        this.viewPortal.visible = true;
 
-        // Use helper scene to render just the portal mesh for proper stencil write
-        this.helperScene.add(portal.mesh);
-        this.renderer.render(this.helperScene, currentViewCamera);
-        this.helperScene.remove(portal.mesh);
+        this.helperScene.add(this.viewPortal);
+        this.renderer.render(this.helperScene, viewCamera);
+        this.helperScene.remove(this.viewPortal);
 
-        // Restore original material and add back to main scene
-        portal.mesh.material = originalMaterial;
-        this.scene.add(portal.mesh);
+        this.viewPortal.material = this.originalMaterial;
+        this.scene.add(this.viewPortal);
         stencilWriterMat.dispose();
 
         // Step 2: Compute virtual camera for portal view
-        updatePortalCamera(
-            currentViewCamera,
-            portal.mesh,
-            destPortal.mesh,
-            portalCam
-        );
+        updatePortalCamera(viewCamera, this.viewPortal, this.referencePoint, portalCam);
 
-        // Step 3: Apply oblique clipping to prevent rendering behind destination portal
-        const destPlane = destPortal.getPlane();
-        applyObliqueClipping(portalCam, destPlane);
+        // Step 3: Apply oblique clipping
+        const refPlane = this.getReferencePlane();
+        applyObliqueClipping(portalCam, refPlane);
 
-        // Step 4: Clear depth buffer for portal area and render scene through portal
+        // Step 4: Clear depth and render scene through portal
         this.renderer.clearDepth();
 
-        // Hide portal meshes during portal view rendering
-        for (const p of this.portals) {
-            p.mesh.visible = false;
-        }
+        this.viewPortal.visible = false;
 
-        // Set stencil test on all scene materials to only render where stencil == stencilRef
         this._setSceneStencilTest(stencilRef, THREE.EqualStencilFunc);
-
-        // Render scene from portal camera
         this.renderer.render(this.scene, portalCam);
-
-        // Clear stencil from scene materials
         this._clearSceneStencilTest();
 
-        // Restore portal visibility
-        for (const p of this.portals) {
-            p.mesh.visible = true;
-        }
+        this.viewPortal.visible = true;
 
-        // Step 5: Recurse for nested portals (portal within portal)
+        // Step 5: Recurse for nested views
         if (level + 1 < this.recursionDepth) {
-            for (const p of this.portals) {
-                if (!p.enabled || !p.linkedPortal) continue;
-
-                // Check if this portal is visible from the current portal camera
-                if (p.isPointInFront(portalCam.position)) {
-                    // Pass the current portal camera as the view camera for the next level
-                    this._renderPortalWithMaterialStencil(p, level + 1, portalCam);
-                }
+            if (this.isPointInFrontOfPortal(portalCam.position)) {
+                this._renderPortalLevel(level + 1, portalCam);
             }
         }
 
-        // Step 6: Restore depth buffer by rendering portal surface with depth-only
-        // This ensures objects in front of the portal in the main view render correctly
+        // Step 6: Restore depth buffer
         const depthOnlyMat = new THREE.MeshBasicMaterial({
             colorWrite: false,
             depthWrite: true
@@ -626,40 +391,31 @@ export class PortalManager {
         depthOnlyMat.stencilFunc = THREE.EqualStencilFunc;
         depthOnlyMat.stencilFail = THREE.KeepStencilOp;
         depthOnlyMat.stencilZFail = THREE.KeepStencilOp;
-        depthOnlyMat.stencilZPass = THREE.DecrementWrapStencilOp;  // Decrement back to previous level
+        depthOnlyMat.stencilZPass = THREE.DecrementWrapStencilOp;
 
-        portal.mesh.material = depthOnlyMat;
-        portal.mesh.visible = true;
+        this.viewPortal.material = depthOnlyMat;
+        this.viewPortal.visible = true;
 
-        // Use helper scene for the depth write pass too
-        this.helperScene.add(portal.mesh);
-        this.renderer.render(this.helperScene, currentViewCamera);
-        this.helperScene.remove(portal.mesh);
+        this.helperScene.add(this.viewPortal);
+        this.renderer.render(this.helperScene, viewCamera);
+        this.helperScene.remove(this.viewPortal);
 
-        portal.mesh.material = originalMaterial;
-        this.scene.add(portal.mesh);
+        this.viewPortal.material = this.originalMaterial;
+        this.scene.add(this.viewPortal);
         depthOnlyMat.dispose();
     }
 
     /**
-     * Render a portal recursively using raw WebGL calls
-     * @private
-     * @param {Portal} portal - Portal to render
-     * @param {number} level - Current recursion level
-     * @deprecated Use _renderPortalWithMaterialStencil instead
+     * Main render method - call this instead of renderer.render()
      */
-    _renderPortalRecursive(portal, level) {
-        // Redirect to the material-based approach
-        this._renderPortalWithMaterialStencil(portal, level);
-    }
+    render() {
+        if (!this.enabled || !this.viewPortal || !this.referencePoint) {
+            this.renderer.render(this.scene, this.mainCamera);
+            return;
+        }
 
-    /**
-     * Simplified render method using material stencil properties
-     * This is an alternative approach that uses Three.js material stencil settings
-     * rather than direct WebGL calls
-     */
-    renderSimplified() {
-        if (!this.enabled || this.portals.length === 0) {
+        // Check if camera is in front of portal
+        if (!this.isPointInFrontOfPortal(this.mainCamera.position)) {
             this.renderer.render(this.scene, this.mainCamera);
             return;
         }
@@ -667,99 +423,28 @@ export class PortalManager {
         this.renderer.autoClear = false;
         this.renderer.clear(true, true, true);
 
-        // Render each portal
-        for (const portal of this.portals) {
-            if (!portal.enabled || !portal.linkedPortal) continue;
+        // Render portal recursively
+        this._renderPortalLevel(0, this.mainCamera);
 
-            const cameraPos = this.mainCamera.position;
-            if (!portal.isPointInFront(cameraPos)) continue;
+        // Final render of main scene where stencil is 0
+        this._setSceneStencilTest(0, THREE.EqualStencilFunc);
 
-            this._renderPortalSimplified(portal);
-        }
-
-        // Hide portals and render final scene
-        for (const portal of this.portals) {
-            portal.mesh.visible = false;
-        }
+        this.viewPortal.visible = false;
         this.renderer.render(this.scene, this.mainCamera);
-        for (const portal of this.portals) {
-            portal.mesh.visible = true;
-        }
+        this.viewPortal.visible = true;
+
+        this._clearSceneStencilTest();
 
         this.renderer.autoClear = true;
     }
 
     /**
-     * Simplified single-level portal render
-     * @private
-     * @param {Portal} portal - Portal to render
-     */
-    _renderPortalSimplified(portal) {
-        const destPortal = portal.linkedPortal;
-
-        // Step 1: Write to stencil
-        const stencilWriter = createPortalStencilWriterMaterial(0);
-        const originalMaterial = portal.mesh.material;
-        portal.mesh.material = stencilWriter;
-
-        this.renderer.render(portal.mesh, this.mainCamera);
-
-        // Step 2: Compute portal camera
-        updatePortalCamera(
-            this.mainCamera,
-            portal.mesh,
-            destPortal.mesh,
-            this.portalCamera
-        );
-
-        // Step 3: Apply oblique clipping
-        const destPlane = destPortal.getPlane();
-        applyObliqueClipping(this.portalCamera, destPlane);
-
-        // Step 4: Render portal view
-        this.renderer.clearDepth();
-
-        // Configure stencil test on all materials
-        this.scene.traverse((obj) => {
-            if (obj.material) {
-                obj.material.stencilWrite = true;
-                obj.material.stencilRef = 1;
-                obj.material.stencilFunc = THREE.EqualStencilFunc;
-            }
-        });
-
-        // Hide portals during portal view
-        for (const p of this.portals) {
-            p.mesh.visible = false;
-        }
-
-        this.renderer.render(this.scene, this.portalCamera);
-
-        // Reset materials
-        this.scene.traverse((obj) => {
-            if (obj.material) {
-                obj.material.stencilWrite = false;
-            }
-        });
-
-        // Restore portals
-        for (const p of this.portals) {
-            p.mesh.visible = true;
-        }
-
-        // Restore original material
-        portal.mesh.material = originalMaterial;
-        stencilWriter.dispose();
-    }
-
-    /**
-     * Set recursion depth for nested portal rendering
+     * Set recursion depth
      * @param {number} depth - Maximum recursion depth (1-10)
      */
     setRecursionDepth(depth) {
         const newDepth = Math.max(1, Math.min(10, depth));
 
-        // Create additional cameras if needed
         while (this.portalCameras.length < newDepth) {
             const cam = new THREE.PerspectiveCamera();
             cam.layers.enableAll();
@@ -771,74 +456,43 @@ export class PortalManager {
 
     /**
      * Enable or disable portal rendering
-     * @param {boolean} enabled - Whether portals are enabled
+     * @param {boolean} enabled
      */
     setEnabled(enabled) {
         this.enabled = enabled;
     }
 
     /**
-     * Remove a portal pair
-     * @param {Portal} portalA - First portal
-     * @param {Portal} portalB - Second portal
-     */
-    removePortalPair(portalA, portalB) {
-        const idx = this.portalPairs.findIndex(
-            p => (p.portalA === portalA && p.portalB === portalB) ||
-                (p.portalA === portalB && p.portalB === portalA)
-        );
-
-        if (idx !== -1) {
-            this.portalPairs.splice(idx, 1);
-        }
-
-        this.portals = this.portals.filter(p => p !== portalA && p !== portalB);
-        this.excludedObjects.delete(portalA.mesh);
-        this.excludedObjects.delete(portalB.mesh);
-
-        // Clean up
-        portalA.dispose();
-        portalB.dispose();
-        this.scene.remove(portalA.mesh);
-        this.scene.remove(portalB.mesh);
-    }
-
-    /**
-     * Update the main camera reference (call if camera changes)
-     * @param {THREE.Camera} camera - New main camera
+     * Update main camera reference
+     * @param {THREE.Camera} camera
      */
     setMainCamera(camera) {
         this.mainCamera = camera;
     }
 
     /**
-     * Dispose of all resources
+     * Check if portal system has a configured portal
+     * @returns {boolean}
+     */
+    hasPortal() {
+        return this.viewPortal !== null && this.referencePoint !== null;
+    }
+
+    /**
+     * Dispose of resources
      */
     dispose() {
-        for (const portal of this.portals) {
-            portal.dispose();
+        if (this.viewPortal) {
+            this.scene.remove(this.viewPortal);
         }
-        this.portals = [];
-        this.portalPairs = [];
-        this.depthOnlyMaterial.dispose();
-    }
-
-    /**
-     * Get all portals
-     * @returns {Portal[]}
-     */
-    getPortals() {
-        return this.portals;
-    }
-
-    /**
-     * Get portal pairs
-     * @returns {Object[]}
-     */
-    getPortalPairs() {
-        return this.portalPairs;
+        if (this.referencePoint) {
+            this.scene.remove(this.referencePoint);
+        }
+        if (this.frameMesh) {
+            this.scene.remove(this.frameMesh);
+        }
+        this.portalCameras = [];
     }
 }
 
 export default PortalManager;
-

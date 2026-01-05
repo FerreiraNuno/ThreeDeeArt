@@ -178,7 +178,7 @@ class GalleryApp {
     setupEventListeners() {
         window.addEventListener('resize', () => this.handleResize());
 
-        // Keyboard shortcuts for portal toggle
+        // Keyboard shortcuts
         window.addEventListener('keydown', (event) => this.handleGlobalKeyDown(event));
 
         // Mouse click for picking up/dropping objects
@@ -204,24 +204,6 @@ class GalleryApp {
      * Handle global keyboard shortcuts
      */
     handleGlobalKeyDown(event) {
-        // Toggle portal rendering with 'P' key
-        if (event.code === 'KeyP' && this.managers.portal) {
-            this.managers.portal.setEnabled(!this.managers.portal.enabled);
-            console.log(`Portals ${this.managers.portal.enabled ? 'enabled' : 'disabled'}`);
-        }
-
-        // Adjust portal recursion depth with '[' and ']' keys
-        if (event.code === 'BracketLeft' && this.managers.portal) {
-            const newDepth = Math.max(1, this.managers.portal.recursionDepth - 1);
-            this.managers.portal.setRecursionDepth(newDepth);
-            console.log(`Portal recursion depth: ${newDepth}`);
-        }
-        if (event.code === 'BracketRight' && this.managers.portal) {
-            const newDepth = Math.min(10, this.managers.portal.recursionDepth + 1);
-            this.managers.portal.setRecursionDepth(newDepth);
-            console.log(`Portal recursion depth: ${newDepth}`);
-        }
-
         // Pick up / drop object with 'E' key
         if (event.code === 'KeyE' && this.managers.camera.getControls().isLocked) {
             const camera = this.managers.camera.getCamera();
@@ -289,8 +271,9 @@ class GalleryApp {
     }
 
     /**
-     * Create portal pairs in the gallery
-     * Portals placed on opposite corridor walls for infinite recursion effect
+     * Create a one-way portal in the corridor
+     * The visible portal on the right wall shows a view from the reference point on the left wall,
+     * creating an infinite recursion effect.
      */
     createPortals() {
         if (!this.managers.portal) return;
@@ -299,68 +282,58 @@ class GalleryApp {
         const corridorConfig = GALLERY_CONFIG.CORRIDOR;
         const layoutConfig = GALLERY_CONFIG.LAYOUT;
 
-        // Portal A: On the LEFT wall of the corridor, facing right (into corridor)
-        const portalAPosition = new THREE.Vector3(
-            corridorConfig.WIDTH / 2 + 0.05,  // Left wall, slightly offset outward so it is not visible
-            corridorConfig.WALL_HEIGHT / 2 - 1.5,    // Centered vertically, 1 unit lower
-            layoutConfig.CORRIDOR_CENTER.z     // Center of corridor
+        // View Portal: Visible portal on the RIGHT wall of the corridor
+        // This is what the player looks INTO
+        const viewPortalPosition = new THREE.Vector3(
+            -corridorConfig.WIDTH / 2 + 0.05,      // Right wall, slightly offset inward
+            corridorConfig.WALL_HEIGHT / 2 - 1.5, // Centered vertically, slightly lower
+            layoutConfig.CORRIDOR_CENTER.z    // In the corridor
         );
-        const portalARotation = new THREE.Euler(0, -Math.PI / 2, 0);  // Facing left (into corridor)
+        const viewPortalRotation = new THREE.Euler(0, Math.PI / 2, 0);  // Facing left into corridor
 
-        // Portal B: On the RIGHT wall of the corridor, facing left (into corridor)
-        const portalBPosition = new THREE.Vector3(
-            -corridorConfig.WIDTH / 2 + 0.05,  // Right wall, slightly offset inward
-            corridorConfig.WALL_HEIGHT / 2 - 1.5,     // Centered vertically, 1 unit lower
-            layoutConfig.CORRIDOR_CENTER.z      // Center of corridor (same Z as portal A)
+        // Reference Point: Invisible point on the LEFT wall
+        // This is where the virtual camera view originates FROM
+        const referencePosition = new THREE.Vector3(
+            corridorConfig.WIDTH / 2 - 0.05,     // Left wall
+            corridorConfig.WALL_HEIGHT / 2 - 1.5, // Same height as view portal
+            layoutConfig.CORRIDOR_CENTER.z        // Slightly offset in Z for depth effect
         );
-        const portalBRotation = new THREE.Euler(0, Math.PI / 2, 0);  // Facing left (into corridor)
+        const referenceRotation = new THREE.Euler(0, -Math.PI / 2, 0);  // Facing right into corridor
 
-        // Create portal meshes with frames
-        const portalAMeshes = this.managers.portal.createPortalMesh(
+        // Create the visible portal mesh with frame
+        const { portalMesh, frameMesh } = this.managers.portal.createViewPortal(
             portalConfig.WIDTH,
             portalConfig.HEIGHT,
-            portalAPosition,
-            portalARotation,
+            viewPortalPosition,
+            viewPortalRotation,
             {
-                portalColor: portalConfig.PORTAL_COLOR_A,
+                portalColor: portalConfig.PORTAL_COLOR,
                 frameColor: portalConfig.FRAME_COLOR,
                 frameWidth: portalConfig.FRAME_WIDTH
             }
         );
 
-        const portalBMeshes = this.managers.portal.createPortalMesh(
-            portalConfig.WIDTH,
-            portalConfig.HEIGHT,
-            portalBPosition,
-            portalBRotation,
-            {
-                portalColor: portalConfig.PORTAL_COLOR_B,
-                frameColor: portalConfig.FRAME_COLOR,
-                frameWidth: portalConfig.FRAME_WIDTH
-            }
+        // Create the invisible reference point
+        const referencePoint = this.managers.portal.createReferencePoint(
+            referencePosition,
+            referenceRotation
         );
 
-        // Add meshes to scene
-        this.managers.scene.add(portalAMeshes.portalMesh);
-        this.managers.scene.add(portalAMeshes.frameMesh);
-        this.managers.scene.add(portalBMeshes.portalMesh);
-        this.managers.scene.add(portalBMeshes.frameMesh);
+        // Add visible elements to scene
+        this.managers.scene.add(portalMesh);
+        this.managers.scene.add(frameMesh);
 
-        // Create the portal pair (links them together)
-        const { portalA, portalB } = this.managers.portal.createPortalPair(
-            portalAMeshes.portalMesh,
-            portalBMeshes.portalMesh
-        );
+        // Set up the one-way portal
+        this.managers.portal.setupPortal(portalMesh, referencePoint, frameMesh);
 
-        // Store references for potential future access
-        this.portalPair = {
-            portalA,
-            portalB,
-            frameA: portalAMeshes.frameMesh,
-            frameB: portalBMeshes.frameMesh
+        // Store references
+        this.portal = {
+            viewPortal: portalMesh,
+            frame: frameMesh,
+            reference: referencePoint
         };
 
-        console.log('Portals created: Blue portal on right corridor wall, Orange portal on left corridor wall (infinite recursion effect)');
+        console.log('One-way portal created: View portal on right corridor wall, reference point on left wall');
     }
 
 
@@ -503,7 +476,7 @@ class GalleryApp {
                 image: 'assets/images/reflection.jpg',
                 width: 3,
                 height: 4,
-                position: new THREE.Vector3(-GALLERY_CONFIG.CORRIDOR.WIDTH / 2 + 0.01, 2.5, GALLERY_CONFIG.LAYOUT.CORRIDOR_CENTER.z - 5),
+                position: new THREE.Vector3(-GALLERY_CONFIG.CORRIDOR.WIDTH / 2 + 0.01, 2.5, GALLERY_CONFIG.LAYOUT.CORRIDOR_CENTER.z - 3.5),
                 rotation: new THREE.Vector3(0, Math.PI / 2, 0)
             }
         ];
@@ -673,15 +646,14 @@ class GalleryApp {
     }
 
     renderScene() {
-        // Check if portal rendering is enabled and we have portals
+        // Check if portal rendering is enabled and we have a portal configured
         const usePortalRendering = this.managers.portal &&
             this.managers.portal.enabled &&
-            this.managers.portal.getPortals().length > 0;
+            this.managers.portal.hasPortal();
 
         if (usePortalRendering) {
             // Portal rendering handles its own scene rendering
-            // Note: Portal rendering currently bypasses the bloom composer
-            // for correct stencil buffer handling
+            // Note: Portal rendering bypasses bloom composer for stencil buffer handling
             this.managers.portal.render();
         } else if (this.composer) {
             this.composer.render(); // Composer rendert jetzt mit Bloom
