@@ -93,6 +93,8 @@ class GalleryApp {
         this.dragon = null;
         this.colorLerpFactor = 0;
         this.listener = new THREE.AudioListener();
+        this.bloomEnabled = true; // Bloom toggle state
+        this.bloomPass = null; // Reference to bloom pass
         this.init();
     }
 
@@ -108,6 +110,9 @@ class GalleryApp {
             this.setupEventListeners();
             this.setupPostProcessing();
             this.start();
+
+            // Initialize UI state
+            setTimeout(() => this.updateBloomButtonUI(), 100);
 
             console.log('3D Gallery initialized successfully');
         } catch (error) {
@@ -171,6 +176,36 @@ class GalleryApp {
         window.addEventListener('keydown', (event) => this.handleGlobalKeyDown(event));
         window.addEventListener('click', (event) => this.handlePickupClick(event));
         setInterval(() => this.updateMultiplayerStatus(), 1000);
+
+        // UI Controls Event Listeners
+        this.setupUIControls();
+    }
+
+    /**
+     * UI-Steuerungen einrichten
+     */
+    setupUIControls() {
+        // Bloom toggle button
+        const bloomToggleBtn = document.getElementById('bloom-toggle');
+        if (bloomToggleBtn) {
+            bloomToggleBtn.addEventListener('click', () => {
+                this.toggleBloom();
+                this.updateBloomButtonUI();
+            });
+        }
+    }
+
+    /**
+     * Bloom Button UI aktualisieren
+     */
+    updateBloomButtonUI() {
+        const bloomToggleBtn = document.getElementById('bloom-toggle');
+        if (bloomToggleBtn) {
+            const isEnabled = this.bloomEnabled;
+            bloomToggleBtn.textContent = isEnabled ? 'ON' : 'OFF';
+            bloomToggleBtn.className = isEnabled ? 'control-button active' : 'control-button';
+            bloomToggleBtn.setAttribute('data-enabled', isEnabled.toString());
+        }
     }
 
     /**
@@ -192,6 +227,36 @@ class GalleryApp {
             const camera = this.managers.camera.getCamera();
             this.intersect.togglePickup(camera);
         }
+
+        if (event.code === 'KeyP') {
+            this.toggleBloom();
+        }
+    }
+
+    /**
+     * Bloom-Effekt ein-/ausschalten
+     */
+    toggleBloom() {
+        if (!this.bloomPass) {
+            console.warn('Bloom pass not initialized');
+            return;
+        }
+
+        this.bloomEnabled = !this.bloomEnabled;
+        this.bloomPass.enabled = this.bloomEnabled;
+
+        // Temporarily disable portal rendering when bloom is enabled to avoid conflicts
+        if (this.managers.portal) {
+            this.managers.portal.enabled = !this.bloomEnabled;
+            console.log(`Portal rendering ${this.bloomEnabled ? 'disabled' : 'enabled'} (to ${this.bloomEnabled ? 'show' : 'hide'} bloom effect)`);
+        }
+
+        console.log(`Bloom effect ${this.bloomEnabled ? 'enabled' : 'disabled'}`);
+        console.log(`Bloom parameters: strength=${this.bloomPass.strength}, radius=${this.bloomPass.radius}, threshold=${this.bloomPass.threshold}`);
+        console.log(`Composer passes: ${this.composer.passes.length}`);
+
+        // Update UI if called from keyboard shortcut
+        this.updateBloomButtonUI();
     }
 
     /**
@@ -333,17 +398,17 @@ class GalleryApp {
         const bloomParams = {
             strength: 1.5,
             radius: 0.4,
-            threshold: 0.85
+            threshold: 0.3  // Lowered from 0.85 to make bloom more visible
         };
 
-        const bloomPass = new UnrealBloomPass(
+        this.bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
             bloomParams.strength,
             bloomParams.radius,
             bloomParams.threshold
         );
 
-        this.composer.addPass(bloomPass);
+        this.composer.addPass(this.bloomPass);
     }
 
     createFractal() {

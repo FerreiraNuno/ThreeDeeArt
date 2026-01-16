@@ -135,5 +135,4 @@ export const KEY_MAPPINGS = {
     LEFT: 'KeyA',
     RIGHT: 'KeyD',
     JUMP: 'Space',
-    TOGGLE_PORTALS: 'KeyP'
 };
